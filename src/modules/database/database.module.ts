@@ -17,7 +17,7 @@ import { Role } from '../users/entities/role.entity';
         password: config.get<string>('DB_PASSWORD') ?? 'postgres',
         database: config.get<string>('DB_NAME') ?? 'nest_template',
         entities: [User, Role],
-        synchronize: false,
+        synchronize: config.get<string>('TYPEORM_SYNCHRONIZE') === 'true',
         logging: (config.get<string>('TYPEORM_LOGGING') ?? 'false') === 'true',
       }),
     }),

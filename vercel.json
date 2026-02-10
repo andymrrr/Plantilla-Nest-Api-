@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build && npm run prisma:generate",
+  "installCommand": "npm install",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api"
+    }
+  ]
+}
+

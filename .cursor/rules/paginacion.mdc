@@ -1,0 +1,41 @@
+---
+description: Sistema de paginación de la plantilla para listados
+globs: src/modules/**/*.service.ts, src/modules/**/dto/*list*.dto.ts
+alwaysApply: false
+---
+
+# Paginación (plantilla)
+
+## Formato estándar
+
+- **Query**: usar `PageQueryDto` (page, limit, orderBy, order, search) o un DTO que lo extienda desde `common/dto/page-query.dto.ts`.
+- **Respuesta**: `PaginationResult<T>` con `{ items, page, limit, total, pages }`. Usar `createPaginationResult(items, page, limit, total)` desde `common/types/pagination.types.ts`.
+
+## En el servicio
+
+1. Crear un DTO de listado que extienda `PageQueryDto` y añada filtros/orderBy del recurso (ej. `UsuarioListQueryDto` con `orderBy`, `activo`).
+2. Usar `buildTypeOrmPaginationArgs<Entidad>(query, opts)` desde `common/utils/pagination.ts`.
+3. Opciones: `searchableFields`, `filterKeys`, `defaultOrderBy`.
+4. Llamar a `repository.findAndCount({ where, skip, take, order })` y devolver `createPaginationResult(...)`.
+
+```typescript
+// ✅ Ejemplo en servicio
+async paginate(query: UsuarioListQueryDto): Promise<PaginationResult<Usuario>> {
+  const args = buildTypeOrmPaginationArgs<Usuario>(query, {
+    searchableFields: ['nombre', 'email'],
+    filterKeys: ['activo'],
+    defaultOrderBy: 'createdAt',
+  });
+  const [items, total] = await this.repo.findAndCount({
+    where: args.where,
+    skip: args.skip,
+    take: args.take,
+    order: args.order as { [key: string]: 'ASC' | 'DESC' },
+  });
+  return createPaginationResult(items, args.page, args.limit, total);
+}
+```
+
+## En el controlador
+
+Devolver el resultado con `ResponseHelper.ok(result, '...')`. El cliente recibe `data: { items, page, limit, total, pages }`.

@@ -1,0 +1,61 @@
+---
+description: Estructura y convenciones de la plantilla Nest API (base para todos los backends)
+alwaysApply: true
+---
+
+# Plantilla Nest API
+
+Este proyecto es la **plantilla** de backend. Cualquier API derivada (AulaPlan, Formación360, etc.) mantiene estas convenciones.
+
+## Estructura modular
+
+- Cada feature en `src/modules/<nombre-modulo>/` (ej. `auth`, `usuarios`, `database`).
+- Entidades TypeORM **solo** en `src/modules/database/entities/` con nombre `<nombre>.entity.ts` y barrel en `entities/index.ts`.
+- Código compartido en `src/common/` (decorators, dto, filters, helpers, types, utils).
+
+## Respuestas API
+
+Todos los endpoints devuelven `RespuestaServicio<T>` usando `ResponseHelper`:
+
+```typescript
+// ✅ Correcto
+return ResponseHelper.ok(datos, 'Operación correcta');
+return ResponseHelper.fail('Error descriptivo', detalleOpcional);
+```
+
+No devolver objetos crudos ni estructuras distintas a `{ exito, mensaje, data?, error? }`.
+
+## Idioma y mensajes
+
+- Mensajes al cliente y textos de validación en **español** (ej. "Recurso no encontrado", "El campo es obligatorio").
+- Código (nombres de variables, tipos, comentarios técnicos) puede estar en inglés o español según el módulo existente.
+
+## Tipado 100 % estricto
+
+- **Prohibido `any`**: usar tipos concretos, `unknown` con type guards o genéricos acotados.
+- **Arrays tipados**: siempre tipar (ej. `User[]`, `PaginationResult<Entidad>`).
+- **Objetos tipados**: DTOs, interfaces o tipos para retornos y parámetros. Retornos de funciones y parámetros siempre tipados.
+- En parámetros decorados (ej. `@CurrentUser() user: RequestUser`) usar `import type` si hace falta.
+
+```typescript
+// ❌ Evitar
+const items: any[] = [];
+function find(id) { ... }
+return { items, total };
+
+// ✅ Correcto
+const items: MiEntidad[] = [];
+function find(id: string): Promise<MiEntidad> { ... }
+return createPaginationResult(items, page, limit, total);
+```
+
+## Listados
+
+- Ningún listado sin paginación: no usar `findAll()` ni equivalente. Usar siempre el sistema de paginación (PageQueryDto + PaginationResult) en todos los listados.
+
+## Reglas por ámbito
+
+- **Módulos Nest**: estructura controller/service/DTOs según `nest-modules.mdc`.
+- **Paginación**: formato estándar según `paginacion.mdc`.
+- **Entidades TypeORM**: convenciones en `typeorm-entities.mdc`.
+- **Auth**: JWT, roles y guards según `auth-plantilla.mdc`.

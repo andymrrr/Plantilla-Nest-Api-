@@ -1,0 +1,41 @@
+---
+description: Convenciones para entidades TypeORM de la plantilla
+globs: src/modules/database/entities/**/*.ts
+alwaysApply: false
+---
+
+# Entidades TypeORM (plantilla)
+
+## Ubicación y nombre
+
+- Todas en `src/modules/database/entities/`.
+- Archivo: `<nombre>.entity.ts`. Exportar `export class MiEntidad {}`.
+- Barrel en `entities/index.ts` para exportar entidades y enums.
+
+## Identificadores y columnas
+
+- **PK**: `@PrimaryGeneratedColumn('uuid')` (id tipo `string`).
+- **Columnas**: nombres en base en snake_case con `name: 'nombre_columna'` cuando no coincida con la propiedad (ej. `createdAt` → `created_at`).
+- **Timestamps**: `@CreateDateColumn({ name: 'created_at' })` donde aplique.
+
+## Enums PostgreSQL
+
+- Definir en `enums.ts` y usar en entidad con `enumName` igual al tipo en BD:
+
+```typescript
+@Column({
+  type: 'enum',
+  enum: RolUsuarioEnum,
+  enumName: 'rol_usuario_enum',
+})
+rol!: RolUsuarioEnum;
+```
+
+## Relaciones e índices
+
+- Usar `@ManyToOne`, `@OneToMany`, `@JoinColumn({ name: '...' })` y `onDelete: 'CASCADE'` o `'SET NULL'` según el esquema.
+- Índices y unique: `@Index('idx_nombre', ['campo'])`, `@Unique(['a', 'b'])`.
+
+## No incluir
+
+- Lógica de negocio (solo definición de tabla/relaciones). Servicios en sus respectivos módulos.

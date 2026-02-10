@@ -4,6 +4,10 @@ import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { Role } from './entities/role.entity';
 import * as bcrypt from 'bcrypt';
+import { UserListQueryDto } from './dto/user-list-query.dto';
+import { buildTypeOrmPaginationArgs } from '../../common/utils/pagination';
+import { createPaginationResult } from '../../common/types/pagination.types';
+import type { PaginationResult } from '../../common/types/pagination.types';
 
 @Injectable()
 export class UsersService {
@@ -48,17 +52,18 @@ export class UsersService {
     return user;
   }
 
-  async findPaginated(
-    page = 1,
-    pageSize = 10,
-  ): Promise<{ items: User[]; total: number; page: number; pageSize: number }> {
-    const skip = (page - 1) * pageSize;
-    const [items, total] = await this.userRepository.findAndCount({
-      skip,
-      take: pageSize,
+  async paginate(query: UserListQueryDto): Promise<PaginationResult<User>> {
+    const args = buildTypeOrmPaginationArgs<User>(query, {
+      searchableFields: ['email', 'firstName', 'lastName'],
+      defaultOrderBy: 'createdAt',
     });
-
-    return { items, total, page, pageSize };
+    const [items, total] = await this.userRepository.findAndCount({
+      where: args.where,
+      skip: args.skip,
+      take: args.take,
+      order: args.order as { [key: string]: 'ASC' | 'DESC' },
+    });
+    return createPaginationResult(items, args.page, args.limit, total);
   }
 
   async validatePassword(

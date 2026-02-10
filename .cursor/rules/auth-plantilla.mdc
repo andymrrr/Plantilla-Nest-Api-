@@ -1,0 +1,30 @@
+---
+description: Autenticación y autorización de la plantilla (JWT, usuario, roles)
+globs: src/modules/auth/**/*.ts, src/common/decorators/*.ts, src/modules/**/*.guard.ts
+alwaysApply: false
+---
+
+# Auth – Plantilla Nest API
+
+Convenciones de autenticación de la plantilla. Cada backend que use esta base puede tener su propia tabla de usuarios y enum de roles; esta regla define el patrón.
+
+## Modelo de usuario
+
+- Autenticación sobre la tabla de usuarios del dominio (ej. `users` con entidad `User`, o `usuarios` con `Usuario`). El ID del usuario debe ser **UUID** (string) para consistencia con el resto de entidades de la plantilla.
+- Roles: definir un enum en el proyecto (ej. `RolUsuarioEnum`: `ADMIN`, `USER`, o los que apliquen). Usar ese enum en guards y en el decorador `@Roles()`.
+
+## JWT y request
+
+- Payload JWT: `{ sub: id del usuario (string), email, role }`.
+- Usuario en request: tipo `RequestUser` con `id`, `email`, `role`. Disponible con `@CurrentUser()`.
+- Para parámetros decorados usar `import type { RequestUser } from '...'` (evitar problemas con isolatedModules).
+
+## Endpoints públicos y protegidos
+
+- Rutas públicas (login, register): marcar con `@Public()`.
+- Rutas protegidas: `JwtAuthGuard` (aplicado por defecto) + `RolesGuard` y `@Roles('ROL1', 'ROL2')` cuando se restrinja por rol.
+
+## Servicios de auth
+
+- Login/register usan el servicio de usuarios del dominio (findByEmail, validar contraseña, crear con bcrypt). No exponer hash de contraseña en respuestas.
+- Endpoint `GET /auth/me`: devolver datos del usuario actual (id, nombre, email, rol, campos de estado, createdAt) validando con el servicio correspondiente.

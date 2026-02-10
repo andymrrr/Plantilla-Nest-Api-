@@ -1,0 +1,39 @@
+---
+description: Estructura de un módulo Nest en la plantilla (controller, service, DTOs)
+globs: src/modules/**/*.ts
+alwaysApply: false
+---
+
+# Módulos Nest (plantilla)
+
+## Estructura por feature
+
+```
+src/modules/<nombre>/
+  <nombre>.module.ts
+  <nombre>.controller.ts
+  <nombre>.service.ts
+  dto/
+    create-<recurso>.dto.ts
+    update-<recurso>.dto.ts
+    <recurso>-list-query.dto.ts   # si hay listado paginado
+```
+
+## Módulo
+
+- Importar `TypeOrmModule.forFeature([Entidad])` si el módulo usa repositorios. Exportar el servicio si otros módulos lo consumen.
+- No registrar entidades fuera de `database/entities`; el módulo solo importa las que usa.
+
+## Controladores
+
+- Rutas con `@Controller('recurso')`. Parámetros UUID con `ParseUUIDPipe`: `@Param('id', ParseUUIDPipe) id: string`.
+- Validación: DTOs con class-validator; el ValidationPipe global los aplica. Respuesta siempre con `ResponseHelper.ok` o `ResponseHelper.fail`.
+
+## Servicios
+
+- Inyectar repositorios con `@InjectRepository(Entidad)`. Listados: método `paginate(query)` que devuelve `PaginationResult<T>` usando `buildTypeOrmPaginationArgs` y `createPaginationResult`.
+- Excepciones HTTP de Nest: `NotFoundException`, `ConflictException`, `UnauthorizedException`, etc., con mensajes en español.
+
+## DTOs de listado
+
+- Extender `PageQueryDto` desde `common/dto/page-query.dto.ts`. Añadir `declare orderBy?: OrderByPermitido` y filtros opcionales. Restringir `orderBy` con `@IsIn([...])` a campos permitidos.
