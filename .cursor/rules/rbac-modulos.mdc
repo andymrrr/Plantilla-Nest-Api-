@@ -1,0 +1,60 @@
+---
+description: RBAC — el acceso vive en el módulo (flags), no en el código del rol
+alwaysApply: true
+---
+
+# RBAC: módulos tienen el acceso, no el rol
+
+El **rol es una plantilla** que agrupa flags. La autorización se evalúa siempre como **módulo + flag**.
+
+## Modelo
+
+```
+aplicaciones → modulos → roles_modulos (lectura, escritura, modificar, eliminar, especial, reporte)
+usuario ← membresía empresa ← asignación de rol(es) ← se fusionan los flags por módulo (OR)
+```
+
+- `@RequirePermission('usuarios', 'escritura')` — correcto.
+- `if (codigoRol === 'SOPORTE')` — **prohibido** para autorizar.
+- `if (user.esPropietario)` para autorizar — **prohibido**. El dueño tiene el rol `PROPIETARIO` y sus flags.
+
+Quién crea roles lo decide el flag `escritura` del módulo `roles` (plantilla Soporte en `rbac-catalogo.ts`).
+
+## Catálogo mínimo de la plantilla
+
+Fuente: `src/modules/seed/rbac-catalogo.ts`. Los códigos de `@RequirePermission` deben coincidir.
+
+| Aplicación | Módulos |
+|------------|---------|
+| ADMINISTRACION | empresas, sucursales, usuarios, roles |
+| PLATAFORMA | planes, suscripciones |
+
+Roles sistema (`empresaId = NULL`, se clonan al crear empresa): `PROPIETARIO`, `SOPORTE`, `ADMINISTRADOR`, `SOLO_LECTURA`.
+
+Un proyecto derivado **añade módulos** al catálogo y vuelve a sembrar. No hardcodear códigos de rol en guards.
+
+## `esPropietario`
+
+Membresía (quién fundó / posee la empresa). **No autoriza**.
+
+Los flags salen del rol asignado (`PROPIETARIO`: negocio de la empresa; `roles` solo lectura; sin `planes`/`suscripciones`).
+
+## Headers de contexto
+
+- `Authorization: Bearer …`
+- `x-empresa-id` — obligatorio salvo `@Public()` o `@SkipEmpresaContext()`
+- `x-sucursal-id` — opcional (fusiona rol empresa-wide + rol de esa sucursal)
+
+## Guards (orden en `app.module.ts`)
+
+1. `JwtAuthGuard`
+2. `ThrottlerGuard`
+3. `ContextoEmpresaGuard` — enriquece `RequestUser.permisos`
+4. `PermisosGuard` — evalúa `@RequirePermission`
+5. `SubscriptionActiveGuard` — suscripción operativa de la **empresa**
+
+## Checklist
+
+- [ ] ¿El endpoint usa `@RequirePermission(modulo, flag)`?
+- [ ] ¿No hay comparaciones de código de rol ni de `esPropietario` para permitir una acción?
+- [ ] ¿El código de módulo existe en `CODIGOS_MODULO_RBAC` / `APLICACIONES_RBAC`?

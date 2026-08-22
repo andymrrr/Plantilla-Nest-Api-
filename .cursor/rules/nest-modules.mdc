@@ -6,6 +6,8 @@ alwaysApply: false
 
 # Módulos Nest (plantilla)
 
+Alineado con `.github/instructions/nest-modules.instructions.md`.
+
 ## Estructura por feature
 
 ```
@@ -14,26 +16,29 @@ src/modules/<nombre>/
   <nombre>.controller.ts
   <nombre>.service.ts
   dto/
-    create-<recurso>.dto.ts
-    update-<recurso>.dto.ts
-    <recurso>-list-query.dto.ts   # si hay listado paginado
 ```
+
+Submódulos de soporte (ej. `otp/`, `mail/templates/`) siguen el mismo patrón service + module.
 
 ## Módulo
 
-- Importar `TypeOrmModule.forFeature([Entidad])` si el módulo usa repositorios. Exportar el servicio si otros módulos lo consumen.
-- No registrar entidades fuera de `database/entities`; el módulo solo importa las que usa.
+- `TypeOrmModule.forFeature([Entidad])` para repositorios usados en el módulo.
+- Entidades registradas en `DatabaseModule` (`ENTIDADES_PLANTILLA` en `database/entities/index.ts`).
+- Exportar servicios consumidos por otros módulos (`AuthModule` importa `OtpModule`, `MailModule`, `PaymentsModule`).
 
 ## Controladores
 
-- Rutas con `@Controller('recurso')`. Parámetros UUID con `ParseUUIDPipe`: `@Param('id', ParseUUIDPipe) id: string`.
-- Validación: DTOs con class-validator; el ValidationPipe global los aplica. Respuesta siempre con `ResponseHelper.ok` o `ResponseHelper.fail`.
+- Orquestación únicamente: DTO → servicio → `ResponseHelper`.
+- IDs: `ParseUUIDPipe` — `Usuario.id`, `Empresa.id`, `Rol.id` son UUID.
+- `@Public()`, `@SkipEmpresaContext()`, `@AllowIncompleteSubscription()`, `@RequirePermission()`, `@CurrentUser() user: RequestUser`.
 
 ## Servicios
 
-- Inyectar repositorios con `@InjectRepository(Entidad)`. Listados: método `paginate(query)` que devuelve `PaginationResult<T>` usando `buildTypeOrmPaginationArgs` y `createPaginationResult`.
-- Excepciones HTTP de Nest: `NotFoundException`, `ConflictException`, `UnauthorizedException`, etc., con mensajes en español.
+- `@InjectRepository(Entidad)` — **prohibido SQL directo** (`typeorm-acceso-datos.mdc`).
+- Listados: `paginate(query)` + `findAndCount`.
+- Mensajes de error en **español**.
+- Autorizar con flags de `user.permisos`, nunca con código de rol.
 
 ## DTOs de listado
 
-- Extender `PageQueryDto` desde `common/dto/page-query.dto.ts`. Añadir `declare orderBy?: OrderByPermitido` y filtros opcionales. Restringir `orderBy` con `@IsIn([...])` a campos permitidos.
+- Extender `PageQueryDto`; `@IsIn([...])` en `orderBy` cuando se restrinja.

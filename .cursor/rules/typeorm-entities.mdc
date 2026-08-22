@@ -1,41 +1,66 @@
 ---
 description: Convenciones para entidades TypeORM de la plantilla
-globs: src/modules/database/entities/**/*.ts
+globs: src/modules/**/entities/**/*.ts, src/modules/database/**/*.ts, src/data-source.ts
 alwaysApply: false
 ---
 
 # Entidades TypeORM (plantilla)
 
-## Ubicación y nombre
+Alineado con `.github/copilot-instructions.md` y `typeorm-acceso-datos.mdc`.
 
-- Todas en `src/modules/database/entities/`.
-- Archivo: `<nombre>.entity.ts`. Exportar `export class MiEntidad {}`.
-- Barrel en `entities/index.ts` para exportar entidades y enums.
+## Ubicación
 
-## Identificadores y columnas
+Todas las entidades viven en `src/modules/database/entities/` + barrel `entities/index.ts` (`ENTIDADES_PLANTILLA`).
 
-- **PK**: `@PrimaryGeneratedColumn('uuid')` (id tipo `string`).
-- **Columnas**: nombres en base en snake_case con `name: 'nombre_columna'` cuando no coincida con la propiedad (ej. `createdAt` → `created_at`).
-- **Timestamps**: `@CreateDateColumn({ name: 'created_at' })` donde aplique.
+- `data-source.ts` carga: `entities: ['src/modules/**/entities/*.ts']`.
+- `DatabaseModule` registra `ENTIDADES_PLANTILLA` en `forRoot` y `forFeature`.
 
-## Enums PostgreSQL
+## Identificadores
 
-- Definir en `enums.ts` y usar en entidad con `enumName` igual al tipo en BD:
+| Entidad | PK |
+|---------|-----|
+| `Usuario`, `Empresa`, `Sucursal`, RBAC, `Plan`, `Suscripcion`, OTP, webhooks | `@PrimaryGeneratedColumn('uuid')` → `string` |
 
-```typescript
-@Column({
-  type: 'enum',
-  enum: RolUsuarioEnum,
-  enumName: 'rol_usuario_enum',
-})
-rol!: RolUsuarioEnum;
-```
+FK a usuario: `usuarioId: string`. FK de suscripción: `empresaId: string`.
+
+## Columnas y enums
+
+- BD en snake_case: `@Column({ name: 'correo_verificado' })`.
+- Enums PostgreSQL en `*-enum.ts` con `enumName` en `@Column`.
+- Timestamps: `@CreateDateColumn({ name: 'fecha_creacion' })`, `@UpdateDateColumn({ name: 'fecha_actualizacion' })`.
 
 ## Relaciones e índices
 
-- Usar `@ManyToOne`, `@OneToMany`, `@JoinColumn({ name: '...' })` y `onDelete: 'CASCADE'` o `'SET NULL'` según el esquema.
-- Índices y unique: `@Index('idx_nombre', ['campo'])`, `@Unique(['a', 'b'])`.
+- `@ManyToOne`, `@OneToMany`, `@JoinColumn({ name: '...' })`, `onDelete: 'CASCADE'` cuando aplique.
+- `@Index`, `@Unique` explícitos en membresías, roles_modulos y desafíos OTP.
 
-## No incluir
+## Entidades del dominio (referencia)
 
-- Lógica de negocio (solo definición de tabla/relaciones). Servicios en sus respectivos módulos.
+```
+database/entities/
+  usuario.entity.ts
+  empresa.entity.ts
+  sucursal.entity.ts
+  aplicacion.entity.ts
+  modulo.entity.ts
+  rol.entity.ts
+  rol-modulo.entity.ts
+  usuario-empresa.entity.ts
+  usuario-sucursal-rol.entity.ts
+  plan.entity.ts
+  suscripcion.entity.ts
+  evento-paypal.entity.ts
+  desafio-verificacion-registro.entity.ts
+  desafio-login-dos-factores.entity.ts
+```
+
+## No incluir en entidades
+
+- Lógica de negocio (solo schema/relaciones).
+- Consultas SQL (`query`, QueryBuilder en entidades).
+- Imports de servicios Nest.
+
+## Acceso desde servicios
+
+- Solo `@InjectRepository(Entidad)` — ver `typeorm-acceso-datos.mdc`.
+- SQL crudo **solo** en `src/migrations/**`.

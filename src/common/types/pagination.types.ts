@@ -1,5 +1,5 @@
 /**
- * Sistema de paginación de la plantilla.
+ * Tipos de paginación compartidos (listados API).
  * Respuesta estándar: items, page, limit, total, pages.
  */
 

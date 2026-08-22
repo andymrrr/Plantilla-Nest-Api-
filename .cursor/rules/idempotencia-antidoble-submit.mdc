@@ -1,0 +1,43 @@
+---
+description: Regla obligatoria para evitar doble submit y duplicados en mutaciones
+alwaysApply: true
+---
+
+# Idempotencia y Anti Doble Submit
+
+Aplicar esta regla en cualquier implementación o refactor de mutaciones (`POST`, `PATCH`, `PUT`, `DELETE`).
+
+## Backend (obligatorio)
+
+- Backend es la autoridad final: nunca confiar solo en `disabled` del frontend.
+- Mantener idempotencia en servidor para mutaciones críticas.
+- Si existe `x-idempotency-key`, usarla como prioridad para deduplicar intención.
+- Si no existe header, usar fallback por huella estable (`method + route + user + body`).
+- Reintentos concurrentes de la misma intención deben compartir ejecución (single-flight).
+- En errores, permitir reintento; no cachear fallos como éxito.
+
+**Implementación:** `IdempotencyInterceptor` global en `src/common/interceptors/idempotency.interceptor.ts` (registrado en `app.module.ts`).
+
+- Aplica a `POST`, `PATCH`, `PUT`, `DELETE` autenticados. Rutas `@Public()` se saltan (login, register, webhooks).
+- Con `x-idempotency-key`: clave `userId + key`; el éxito se reutiliza 15 minutos.
+- Sin header: huella SHA256 de `method + path + userId + empresaId + body`; solo single-flight (no cachea el éxito).
+- Un fallo no se guarda: el cliente puede reintentar.
+
+## Frontend (obligatorio)
+
+- Todo submit debe bloquearse mientras esté en vuelo (`isLoading`/`disabled`).
+- Evitar disparar la misma mutación más de una vez por doble click o Enter repetido.
+- Para flujos críticos, enviar `x-idempotency-key` generado por intención de negocio.
+
+## Billing / suscripciones
+
+- Flujo webhook-first: cambios manuales se tratan como "solicitados" hasta confirmación webhook.
+- No marcar estado final de suscripción/pago antes de confirmación verificada del proveedor.
+
+## Checklist rápido antes de cerrar tarea
+
+- [ ] ¿La mutación evita duplicados por doble click?
+- [ ] ¿Existe protección real en backend?
+- [ ] ¿UI bloquea submit en vuelo?
+- [ ] ¿Flujos críticos usan idempotency key?
+- [ ] ¿En billing el estado final depende de webhook?

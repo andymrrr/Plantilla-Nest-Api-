@@ -1,58 +1,215 @@
-<!-- Instrucciones de proyecto para GitHub Copilot. Basadas en .cursor/rules/. -->
+# Plantilla Nest API — Instrucciones para GitHub Copilot / VS Code
 
-# Plantilla Nest API – Reglas para Copilot
+> Fuente de verdad extendida: `.cursor/rules/*.mdc` y `docs/tecnico/`.
+> Este archivo resume lo **obligatorio** y el **estado real del repo** para que Copilot genere código alineado.
 
-Este repositorio es la **plantilla** de backend NestJS. Las convenciones están en `.cursor/rules/`: la regla principal es `proyecto-plantilla.mdc`; el resto (auth-plantilla, nest-modules, paginacion, typeorm-entities) aplican por contexto.
+---
 
-## Estructura modular (plantilla)
+## 1. Prioridades (leer primero)
 
-- Cada feature en `src/modules/<nombre-modulo>/` (ej. `auth`, `usuarios`, `cursos`).
-- Entidades TypeORM **solo** en `src/modules/database/entities/`, archivos `<nombre>.entity.ts`. Barrel en `entities/index.ts`.
-- Código compartido en `src/common/` (decorators, dto, filters, helpers, types, utils).
+1. **Respuestas API**: siempre `ResponseHelper.ok(data, mensaje)` o `ResponseHelper.fail(mensaje)` → `{ exito, mensaje, data?, error? }`.
+2. **TypeORM estricto**: cero SQL directo en runtime. Solo `@InjectRepository` + `find`, `findOne`, `save`, `update`, `delete`, `upsert`, `findAndCount`. SQL crudo **solo** en `src/migrations/**`.
+3. **Tipado estricto**: prohibido `any`. Tipos explícitos en parámetros y retornos.
+4. **Idioma**: mensajes al cliente y validaciones en **español**.
+5. **Listados**: siempre paginados (`PageQueryDto` → `PaginationResult<T>`). Prohibido `findAll()` en endpoints.
+6. **Mutaciones**: bloquear doble submit en UI; en backend el `IdempotencyInterceptor` es autoridad (`idempotencia-antidoble-submit.mdc`). Enviar `x-idempotency-key` en flujos críticos.
 
-## Respuestas API
+---
 
-- Todos los endpoints devuelven `RespuestaServicio<T>` con `ResponseHelper.ok(datos, mensaje)` o `ResponseHelper.fail(mensaje, error?)`.
-- Formato: `{ exito, mensaje, data?, error? }`. No devolver objetos crudos.
+## 2. Mapa del repositorio
 
-## Tipado 100 % estricto
+```
+src/
+  app.module.ts          # Guards: Jwt, Throttler, ContextoEmpresa, Permisos, SubscriptionActive
+  main.ts                # rawBody: true (webhooks PayPal), ValidationPipe global
+  common/                # decorators, dto, filters, helpers, types, utils
+  modules/
+    auth/                # JWT UUID, registro OTP, login 2FA, PermisosService
+    otp/                 # LoginTwoFactorService, EmailOtpDeliveryService
+    users/               # UsersService scoped a empresa
+    empresas/            # Onboarding tenant + sucursales
+    roles/               # Aplicaciones, módulos, roles, asignaciones
+    mail/                # MailService, TransactionalMailService, plantillas HTML
+    payments/            # PayPal por empresa, webhooks, checkout
+    seed/                # RBAC + planes SaaS (TypeORM, sin SQL)
+    database/            # DatabaseModule + entities/
+  migrations/            # Único lugar permitido para queryRunner.query
+```
 
-- No usar `any`. Usar tipos concretos, `unknown` con type guards o genéricos acotados.
-- Arrays siempre tipados (ej. `User[]`, `PaginationResult<Entidad>`).
-- Objetos con interfaces o tipos (DTOs, tipos de retorno). Parámetros y retornos de funciones siempre tipados.
-- En parámetros decorados (ej. `@CurrentUser() user: RequestUser`) usar `import type` si hace falta.
+**Módulos registrados en `AppModule`:** `DatabaseModule`, `MailModule`, `PaymentsModule`, `SeedModule`, `AuthModule`, `UsersModule`, `EmpresasModule`, `RolesModule`.
 
-## Paginación (listados)
+---
+
+## 3. Identidad y entidades
+
+| Tema | Estado actual |
+|------|----------------|
+| Ubicación entidades | `src/modules/database/entities/` + barrel `index.ts` |
+| PK `Usuario.id` | UUID (`string`); JWT `sub` UUID |
+| Autorización | RBAC módulo + flag (`@RequirePermission`). El rol no autoriza. |
+| Tenancy | Multiempresa (`x-empresa-id`); suscripción por empresa |
+
+**Al crear módulos nuevos:** seguir `.cursor/rules/rbac-modulos.mdc` y `typeorm-entities.mdc`.
+
+---
+
+## 4. Capas Nest (controller → service → repository)
+
+### Paginación (listados)
 
 - No usar `findAll()` ni equivalentes sin paginación.
-- Query: `PageQueryDto` desde `common/dto/page-query.dto.ts` o DTO que lo extienda (page, limit, orderBy, order, search).
-- Respuesta: `PaginationResult<T>` con `{ items, page, limit, total, pages }`. Usar `createPaginationResult(items, page, limit, total)` desde `common/types/pagination.types.ts`.
-- En el servicio: `buildTypeOrmPaginationArgs<Entidad>(query, { searchableFields, filterKeys, defaultOrderBy })` desde `common/utils/pagination.ts` y `repository.findAndCount(...)`.
-- DTO de listado: extender `PageQueryDto`, añadir `declare orderBy?: OrderByPermitido` y filtros; restringir orderBy con `@IsIn([...])`.
+- Query: `PageQueryDto` desde `common/dto/page-query.dto.ts` o DTO que lo extienda (`page`, `limit`, `orderBy`, `order`, `search`).
+- Respuesta: `PaginationResult<T>` con `{ items, page, limit, total, pages }`. Usar `createPaginationResult(...)` desde `common/types/pagination.types.ts`.
+- Servicio: `buildTypeOrmPaginationArgs<Entidad>(query, { searchableFields, defaultOrderBy })` + `repository.findAndCount(...)`.
+- Filtros de negocio: combinar en el servicio desde el DTO tipado (no en el helper de paginación).
+- DTO listado: extender `PageQueryDto`, `declare orderBy` con `@IsIn([...])`.
+- Regla completa: `.cursor/rules/paginacion.mdc` (igual que ZynklyBackend).
 
-## Entidades TypeORM (plantilla)
+### Controller
+- Solo orquesta: recibe DTO, llama servicio, devuelve `ResponseHelper`.
+- Rutas públicas: `@Public()`.
+- Sin contexto empresa: `@SkipEmpresaContext()`.
+- Rutas que permiten suscripción incompleta (checkout, sync): `@AllowIncompleteSubscription()`.
+- Permiso: `@RequirePermission('usuarios', 'escritura')`.
+- Usuario autenticado: `@CurrentUser() user: RequestUser` (`src/common/types/request-user.types.ts`).
 
-- PK: `@PrimaryGeneratedColumn('uuid')` (id tipo `string`).
-- Columnas en BD en snake_case con `name: 'nombre_columna'` cuando no coincida (ej. `created_at`).
-- Enums: definir en `enums.ts` y en entidad usar `enumName` igual al tipo en BD. Relaciones con `@JoinColumn`, `onDelete: 'CASCADE'` o `'SET NULL'`. Índices con `@Index`, `@Unique`. Sin lógica de negocio en entidades.
+### Service
+- Lógica de negocio + `@InjectRepository(Entidad)`.
+- Excepciones Nest con mensaje en español: `NotFoundException`, `BadRequestException`, `ConflictException`, etc.
+- Listados: `paginate(query)` con `buildTypeOrmPaginationArgs` + `createPaginationResult`.
 
-## Autenticación (plantilla)
+### DTO
+- `class-validator` + `class-transformer`.
+- Listados: extender `PageQueryDto`; restringir `orderBy` con `@IsIn([...])`.
 
-- Usuario: tabla del dominio (ej. `users`/`User` o `usuarios`/`Usuario`), ID UUID. Roles: enum del proyecto (ej. `RolUsuarioEnum`).
-- JWT: payload `{ sub, email, role }`. Usuario en request: `RequestUser` (`id`, `email`, `role`), con `@CurrentUser()`.
-- Rutas públicas (login, register): `@Public()`. Protegidas: `JwtAuthGuard` + `RolesGuard` y `@Roles('...')` según roles del proyecto.
-- No exponer hash de contraseña en respuestas.
+---
 
-## Módulos Nest (plantilla)
+## 5. Autenticación y OTP
 
-- Estructura: `<nombre>.module.ts`, `<nombre>.controller.ts`, `<nombre>.service.ts`, `dto/` (create, update, list-query).
-- Controladores: `@Param('id', ParseUUIDPipe) id: string` para UUID. Respuesta con `ResponseHelper`. DTOs con class-validator.
-- Servicios: `@InjectRepository(Entidad)`. Listados con método `paginate(query)` que devuelve `PaginationResult<T>`. Excepciones Nest con mensajes en **español**.
+> Detalle completo: `.cursor/rules/auth-plantilla.mdc` (espejo de esta sección).
 
-## Idioma
+**Archivos clave:** `src/modules/auth/`, `src/modules/otp/`, `RegisterEmailVerificationService`.
 
-- Mensajes al cliente y textos de validación en **español** (ej. "Recurso no encontrado", "El nombre es obligatorio").
+### Modelo (obligatorio en este repo)
 
-## Clean Code
+- `Usuario.id`: **UUID (`string`)** — JWT `sub: string`, `RequestUser.id: string`.
+- Sin rol en el JWT. Permisos por empresa vía `ContextoEmpresaGuard`.
+- Campos: `correoVerificado`, `dosFactoresActivo`; no exponer `claveHash`.
 
-- Responsabilidades claras, métodos pequeños, sin lógica duplicada.
+| Endpoint | Comportamiento |
+|----------|----------------|
+| `POST /auth/register` | Crea usuario, **sin JWT**; envía OTP. No crea empresa ni suscripción |
+| `POST /auth/register/verify-email` | Verifica OTP → JWT |
+| `POST /auth/register/resend-email-code` | Reenvío (throttled) |
+| `POST /auth/login` | JWT directo, o `{ twoFactorRequired }`, o re-verificación email |
+| `POST /auth/login/complete-2fa` | Completa login 2FA |
+| `PATCH /auth/me/two-factor` | Activa/desactiva 2FA (contraseña actual) |
+| `GET /auth/me` | Perfil + membresías (`@SkipEmpresaContext`, `@AllowIncompleteSubscription`) |
+| `POST /empresas` | Onboarding tenant + bootstrap suscripción `INCOMPLETA` |
+
+- JWT payload: `{ sub: string, email }` (sub = `Usuario.id`).
+- OTP: hash SHA256 con pepper de env; correos vía `TransactionalMailService` (no HTML inline en auth).
+- Docs: `docs/tecnico/08-otp-y-autenticacion.md`, `docs/tecnico/11-rbac-usuarios-y-suscripcion.md`.
+
+---
+
+## 6. Correo transaccional
+
+- **Transporte:** `MailService` (`sendMessage`, `sendPlainText`).
+- **Plantillas:** `TransactionalMailService` + `templates/transactional-email.templates.ts`.
+- **Shell HTML:** `buildTransactionalEmailShell` en `email-template.util.ts`; escapar dinámicos con `escapeHtml`.
+- Branding: `APP_NAME` en env.
+- Regla: `.cursor/rules/email-templates-design-system.mdc`.
+
+---
+
+## 7. PayPal / suscripciones SaaS
+
+- **Servicios:** `PlatformSubscriptionService`, `PaypalBillingService`.
+- **Webhook:** `POST /integrations/paypal/webhook` — requiere `NestFactory.create(AppModule, { rawBody: true })`.
+- Flujo **webhook-first**: no marcar suscripción activa solo por return URL de PayPal.
+- Suscripción por **empresa** (`Suscripcion.empresaId`).
+- Guard global `SubscriptionActiveGuard` bloquea si la empresa no tiene suscripción operativa.
+- Excepciones: `@Public()`, `@AllowIncompleteSubscription()`, rutas sin `empresaId`.
+- Docs: `docs/tecnico/09-suscripciones-paypal.md`.
+
+---
+
+## 8. Acceso a datos (TypeORM)
+
+### Hacer
+```typescript
+@InjectRepository(Usuario)
+private readonly usuarioRepo: Repository<Usuario>;
+
+await this.usuarioRepo.findOne({ where: { id } });
+await this.usuarioRepo.update({ id }, { correoVerificado: true });
+await this.planRepository.upsert(rows, ['codigo']);
+await this.usuarioRepo.findAndCount({ skip, take, where, order });
+```
+
+### No hacer (en servicios, guards, seeds)
+```typescript
+await dataSource.query('SELECT ...');      // ❌
+await queryRunner.query('INSERT ...');       // ❌ (solo migraciones)
+```
+
+- Regla: `.cursor/rules/typeorm-acceso-datos.mdc`
+- Docs: `docs/tecnico/10-acceso-datos-typeorm.md`
+
+---
+
+## 9. Seed
+
+- `RbacSeedService` + `PlatformPlansSeedService` usan `repository.upsert` (TypeORM).
+- `SEED_ON_STARTUP=true` → siembra RBAC + planes al arrancar.
+- `POST /seed/fundacion` y `POST /seed/platform-plans` → `SEED_ENDPOINT_ENABLED=true`.
+
+---
+
+## 10. Guards e interceptores globales
+
+| Guard / interceptor | Rol |
+|---------------------|-----|
+| `JwtAuthGuard` | Auth Bearer por defecto |
+| `ThrottlerGuard` | Rate limit global (120/min) |
+| `ContextoEmpresaGuard` | `x-empresa-id` + permisos fusionados |
+| `PermisosGuard` | `@RequirePermission(modulo, flag)` |
+| `SubscriptionActiveGuard` | Suscripción de la empresa operativa |
+| `IdempotencyInterceptor` | Dedup mutaciones (`x-idempotency-key` o huella) |
+| `LoggingInterceptor` | Log HTTP |
+| `AllExceptionsFilter` | Formato de error unificado |
+
+Decoradores en `src/common/decorators/`: `Public`, `SkipEmpresaContext`, `RequirePermission`, `CurrentUser`, `AllowIncompleteSubscription`.
+
+---
+
+## 11. Índice de reglas Cursor (detalle)
+
+| Archivo | Cuándo aplica |
+|---------|----------------|
+| `proyecto-plantilla.mdc` | Siempre — convenciones base |
+| `typeorm-acceso-datos.mdc` | Siempre — cero SQL directo |
+| `idempotencia-antidoble-submit.mdc` | Mutaciones POST/PATCH/PUT/DELETE |
+| `email-templates-design-system.mdc` | Correos transaccionales |
+| `rbac-modulos.mdc` | Siempre — autorización módulo + flag |
+| `auth-plantilla.mdc` | Auth, OTP, 2FA, guards, JWT (`Usuario.id` UUID) |
+| `nest-modules.mdc` | `src/modules/**/*.ts` |
+| `typeorm-entities.mdc` | Entidades (`database/entities/`) |
+| `paginacion.mdc` | Listados paginados (`PageQueryDto`, `PaginationResult`) |
+
+**Copilot path-scoped:** `.github/instructions/*.instructions.md` — deben coincidir con las reglas Cursor anteriores (incluye `pagination.instructions.md`).
+
+---
+
+## 12. Checklist antes de proponer código
+
+- [ ] ¿Usa `ResponseHelper` en controller?
+- [ ] ¿Servicio usa `@InjectRepository` sin SQL crudo?
+- [ ] ¿Listado paginado?
+- [ ] ¿Mensajes en español?
+- [ ] ¿Sin `any`?
+- [ ] ¿Correo vía `TransactionalMailService` / shell único?
+- [ ] ¿Mutación crítica con `x-idempotency-key` (el interceptor ya cubre single-flight)?
+- [ ] ¿Ruta pública, `@SkipEmpresaContext` o `@AllowIncompleteSubscription` si aplica?
+- [ ] ¿Mutación de negocio con `@RequirePermission(modulo, flag)`?

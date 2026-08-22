@@ -15,19 +15,24 @@ alwaysApply: false
 
 1. Crear un DTO de listado que extienda `PageQueryDto` y añada filtros/orderBy del recurso (ej. `UsuarioListQueryDto` con `orderBy`, `activo`).
 2. Usar `buildTypeOrmPaginationArgs<Entidad>(query, opts)` desde `common/utils/pagination.ts`.
-3. Opciones: `searchableFields`, `filterKeys`, `defaultOrderBy`.
-4. Llamar a `repository.findAndCount({ where, skip, take, order })` y devolver `createPaginationResult(...)`.
+3. Opciones: `searchableFields`, `defaultOrderBy`.
+4. Filtros del recurso (activo, estado, etc.): aplicarlos en el **servicio** desde el DTO tipado; no inferirlos con casts genéricos en el helper.
+5. Llamar a `repository.findAndCount({ where, skip, take, order })` y devolver `createPaginationResult(...)`.
 
 ```typescript
 // ✅ Ejemplo en servicio
 async paginate(query: UsuarioListQueryDto): Promise<PaginationResult<Usuario>> {
   const args = buildTypeOrmPaginationArgs<Usuario>(query, {
     searchableFields: ['nombre', 'email'],
-    filterKeys: ['activo'],
     defaultOrderBy: 'createdAt',
   });
+  const where = query.activo === undefined
+    ? args.where
+    : Array.isArray(args.where)
+      ? args.where.map((clause) => ({ ...clause, activo: query.activo }))
+      : { ...args.where, activo: query.activo };
   const [items, total] = await this.repo.findAndCount({
-    where: args.where,
+    where,
     skip: args.skip,
     take: args.take,
     order: args.order as { [key: string]: 'ASC' | 'DESC' },

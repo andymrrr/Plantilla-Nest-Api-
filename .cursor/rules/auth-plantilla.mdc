@@ -1,30 +1,122 @@
 ---
-description: Autenticación y autorización de la plantilla (JWT, usuario, roles)
-globs: src/modules/auth/**/*.ts, src/common/decorators/*.ts, src/modules/**/*.guard.ts
+description: Autenticación, OTP, 2FA, JWT, guards y suscripción SaaS por empresa
+globs: src/modules/auth/**/*.ts, src/modules/otp/**/*.ts, src/common/decorators/*.ts, src/common/types/request-user.types.ts, src/modules/**/*.guard.ts
 alwaysApply: false
 ---
 
 # Auth – Plantilla Nest API
 
-Convenciones de autenticación de la plantilla. Cada backend que use esta base puede tener su propia tabla de usuarios y enum de roles; esta regla define el patrón.
+Convenciones de autenticación alineadas con el **estado real del repo** y con `.github/copilot-instructions.md`.
 
 ## Modelo de usuario
 
-- Autenticación sobre la tabla de usuarios del dominio (ej. `users` con entidad `User`, o `usuarios` con `Usuario`). El ID del usuario debe ser **UUID** (string) para consistencia con el resto de entidades de la plantilla.
-- Roles: definir un enum en el proyecto (ej. `RolUsuarioEnum`: `ADMIN`, `USER`, o los que apliquen). Usar ese enum en guards y en el decorador `@Roles()`.
+- Tabla `usuarios`, entidad `Usuario` en `src/modules/database/entities/usuario.entity.ts`.
+- **`Usuario.id` es UUID (`string`)**. JWT `sub` es string UUID.
+- Sin rol en el token. Los permisos se resuelven por empresa (ver `rbac-modulos.mdc`).
+- Campos auth: `correoVerificado`, `dosFactoresActivo`, `claveHash` (bcrypt; **nunca** en respuestas).
+- `planCodigoElegido` se guarda en registro; la suscripción se crea al dar de alta la empresa.
 
 ## JWT y request
 
-- Payload JWT: `{ sub: id del usuario (string), email, role }`.
-- Usuario en request: tipo `RequestUser` con `id`, `email`, `role`. Disponible con `@CurrentUser()`.
-- Para parámetros decorados usar `import type { RequestUser } from '...'` (evitar problemas con isolatedModules).
+- Payload JWT: `{ sub: string, email: string }` (`sub` = `Usuario.id`).
+- Tipo request: `RequestUser` en `src/common/types/request-user.types.ts`:
 
-## Endpoints públicos y protegidos
+```typescript
+export interface RequestUser {
+  id: string;
+  email: string;
+  empresaId: string | null;
+  sucursalId: string | null;
+  esPropietario: boolean;
+  permisos: PermisosPorModulo;
+}
+```
 
-- Rutas públicas (login, register): marcar con `@Public()`.
-- Rutas protegidas: `JwtAuthGuard` (aplicado por defecto) + `RolesGuard` y `@Roles('ROL1', 'ROL2')` cuando se restrinja por rol.
+- `JwtStrategy.validate` entrega el usuario base (sin empresa). `ContextoEmpresaGuard` enriquece permisos si hay `x-empresa-id`.
+- Decorador: `@CurrentUser() user: RequestUser` con `import type { RequestUser } from '...'`.
 
-## Servicios de auth
+## Guards globales (`app.module.ts`)
 
-- Login/register usan el servicio de usuarios del dominio (findByEmail, validar contraseña, crear con bcrypt). No exponer hash de contraseña en respuestas.
-- Endpoint `GET /auth/me`: devolver datos del usuario actual (id, nombre, email, rol, campos de estado, createdAt) validando con el servicio correspondiente.
+| Guard | Rol |
+|-------|-----|
+| `JwtAuthGuard` | Bearer JWT por defecto |
+| `ThrottlerGuard` | Rate limit (120 req/min) |
+| `ContextoEmpresaGuard` | Header `x-empresa-id` + fusión de flags |
+| `PermisosGuard` | `@RequirePermission(modulo, flag)` |
+| `SubscriptionActiveGuard` | Suscripción **de la empresa** operativa |
+
+## Decoradores de acceso
+
+| Decorador | Uso |
+|-----------|-----|
+| `@Public()` | Sin JWT (register, login, verify-email, webhooks) |
+| `@SkipEmpresaContext()` | Autenticado sin `x-empresa-id` (auth, listado/alta empresas, seed) |
+| `@AllowIncompleteSubscription()` | Permite acceso con suscripción `INCOMPLETA` (checkout, sync, `/auth/me`, 2FA) |
+| `@RequirePermission('usuarios', 'escritura')` | Flag del módulo (nunca código de rol) |
+
+## Flujo registro (OTP email)
+
+1. `POST /auth/register` → crea usuario (`correoVerificado: false`), **no** devuelve JWT. No crea empresa ni suscripción.
+2. `RegisterEmailVerificationService.issueForUser` → OTP por `TransactionalMailService`.
+3. `POST /auth/register/verify-email` → activa cuenta → JWT (`buildSessionResponse`).
+4. `POST /auth/register/resend-email-code` → reenvío con cooldown (`@Throttle` 8/min).
+5. `POST /empresas` → clona roles sistema, asigna `PROPIETARIO`, `bootstrapEmpresaSubscription` → `INCOMPLETA`.
+
+**Servicio:** `src/modules/auth/register-email-verification.service.ts`
+**Entidad desafío:** `DesafioVerificacionRegistro` (`usuarioId: string`)
+
+## Flujo login y 2FA
+
+1. `POST /auth/login` → contraseña OK:
+   - Si `correoVerificado === false` → re-emite verificación registro (sin JWT).
+   - Si `dosFactoresActivo` → `{ twoFactorRequired, twoFactorToken, expiresInSeconds }`.
+   - Si no → JWT directo.
+2. `POST /auth/login/complete-2fa` → `LoginTwoFactorService.verifyAndConsumeChallenge` → JWT.
+3. `PATCH /auth/me/two-factor` → activar/desactivar (requiere `currentPassword`).
+
+**Módulo OTP:** `src/modules/otp/` (`LoginTwoFactorService`, `EmailOtpDeliveryService`)
+**Entidad desafío:** `DesafioLoginDosFactores` (`usuarioId: string`)
+**Correo 2FA:** `TransactionalMailService.sendLoginTwoFactorCode` (no HTML inline en auth).
+
+## Endpoint perfil
+
+- `GET /auth/me` → `@SkipEmpresaContext()` + `@AllowIncompleteSubscription()`.
+- Devuelve nombre, apellido, permisos del contexto, membresías (`empresas`) y suscripción si hay `x-empresa-id`.
+- Mensajes y validaciones en **español**.
+
+## Servicios y capas
+
+```
+AuthController → AuthService → UsersService / RegisterEmailVerificationService / LoginTwoFactorService / PermisosService / PlatformSubscriptionService
+OtpModule → LoginTwoFactorService → EmailOtpDeliveryService → TransactionalMailService
+```
+
+- **Prohibido** en `AuthController`: repositorios, SQL, construcción de HTML de correo.
+- **Prohibido** SQL directo; solo `@InjectRepository` en servicios (ver `typeorm-acceso-datos.mdc`).
+
+## Variables de entorno OTP
+
+- `AUTH_REGISTER_EMAIL_OTP_TTL_SECONDS`, `AUTH_REGISTER_EMAIL_OTP_RESEND_SECONDS`, `AUTH_REGISTER_EMAIL_OTP_MAX_ATTEMPTS`, `AUTH_REGISTER_EMAIL_OTP_PEPPER`
+- `AUTH_LOGIN_2FA_OTP_TTL_SECONDS`, `AUTH_LOGIN_2FA_MAX_ATTEMPTS`, `AUTH_LOGIN_2FA_OTP_PEPPER`
+
+## Idempotencia y throttling
+
+- Mutaciones auth sensibles: respetar `idempotencia-antidoble-submit.mdc`.
+- Throttle en login, complete-2fa y resend-email-code (ver `auth.controller.ts`).
+
+## Documentación
+
+- `docs/tecnico/08-otp-y-autenticacion.md`
+- `docs/tecnico/11-rbac-usuarios-y-suscripcion.md`
+- Instrucciones Copilot: `.github/instructions/auth-mail.instructions.md`
+
+## Checklist auth
+
+- [ ] ¿`sub` en JWT es UUID (`string`)?
+- [ ] ¿Registro sin JWT hasta verificar email?
+- [ ] ¿Suscripción se crea al crear empresa, no en el registro?
+- [ ] ¿Correos vía `TransactionalMailService`?
+- [ ] ¿Rutas públicas con `@Public()`?
+- [ ] ¿Auth/empresas onboarding con `@SkipEmpresaContext()`?
+- [ ] ¿Checkout/me/2FA con `@AllowIncompleteSubscription()` si aplica?
+- [ ] ¿Mensajes en español?

@@ -1,0 +1,63 @@
+---
+description: Acceso a datos estricto con TypeORM — prohibido SQL directo en runtime
+alwaysApply: true
+---
+
+# TypeORM estricto — cero query directo
+
+Regla obligatoria para **todo código de aplicación** (`src/modules/**`, `src/common/**`). No aplica a `src/migrations/**` ni a `src/data-source.ts`.
+
+Espejo Copilot: `.github/instructions/typeorm.instructions.md` — mantener alineado con esta regla.
+
+## Prohibido en runtime
+
+- `queryRunner.query(...)`, `manager.query(...)`, `connection.query(...)`
+- `getConnection()`, `DataSource.query()` desde servicios, controladores o guards
+- SQL embebido en strings (`SELECT`, `INSERT`, `UPDATE`, `DELETE`, `EXEC`)
+- ORM alternativos o drivers directos (`pg`, `mysql2`, `knex`) fuera de migraciones
+- `@InjectDataSource()` solo para ejecutar SQL crudo en servicios (no permitido)
+
+## Obligatorio
+
+- Inyectar repositorios: `@InjectRepository(Entidad) private readonly repo: Repository<Entidad>`
+- Registrar entidades en `TypeOrmModule.forFeature([...])` del módulo que las usa
+- Operaciones con API TypeORM:
+  - Lectura: `find`, `findOne`, `findOneBy`, `findAndCount`, `count`, `exist` / `exists`
+  - Escritura: `save`, `insert`, `update`, `delete`, `upsert`, `softRemove` (si aplica)
+  - Transacciones: `this.repo.manager.transaction(async (manager) => { ... })` usando `manager.getRepository(Entidad)`
+
+## QueryBuilder (uso acotado)
+
+`createQueryBuilder` solo cuando **no** se pueda expresar con `find`/`update`/`QueryBuilder` simple, por ejemplo:
+
+- Joins complejos con agregaciones
+- Filtros dinámicos que `buildTypeOrmPaginationArgs` no cubre
+
+Si se usa QueryBuilder:
+
+- Tipar alias y parámetros (`setParameter`, `where('alias.campo = :valor', { valor })`)
+- No concatenar input de usuario en SQL
+- Preferir métodos del repositorio antes que SQL manual
+
+## Listados
+
+- Siempre paginados: `findAndCount` + `buildTypeOrmPaginationArgs` + `createPaginationResult`
+- Prohibido `find()` sin `take`/`skip` en endpoints de listado
+
+## Seeds y scripts
+
+- Seeds en `src/modules/seed/` deben usar **repositorios TypeORM** (`upsert`, `save`, `findOne`)
+- Prohibido SQL directo en servicios de seed
+
+## Migraciones (única excepción)
+
+- Solo en `src/migrations/*.ts` se permite `queryRunner.query` para DDL/DML de esquema
+- Preferir API de migración TypeORM (`createTable`, `addColumn`, etc.) cuando sea viable
+- La lógica de negocio **nunca** va en migraciones
+
+## Checklist antes de merge
+
+- [ ] ¿El servicio usa `@InjectRepository`?
+- [ ] ¿No hay `.query(` ni SQL crudo fuera de migraciones?
+- [ ] ¿Los listados usan paginación estándar?
+- [ ] ¿Transacciones usan `manager.getRepository`?

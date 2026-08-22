@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from '../users/entities/user.entity';
-import { Role } from '../users/entities/role.entity';
+import { ENTIDADES_PLANTILLA } from './entities';
 
 @Module({
   imports: [
@@ -16,12 +15,12 @@ import { Role } from '../users/entities/role.entity';
         username: config.get<string>('DB_USER') ?? 'postgres',
         password: config.get<string>('DB_PASSWORD') ?? 'postgres',
         database: config.get<string>('DB_NAME') ?? 'nest_template',
-        entities: [User, Role],
+        entities: ENTIDADES_PLANTILLA,
         synchronize: config.get<string>('TYPEORM_SYNCHRONIZE') === 'true',
         logging: (config.get<string>('TYPEORM_LOGGING') ?? 'false') === 'true',
       }),
     }),
-    TypeOrmModule.forFeature([User, Role]),
+    TypeOrmModule.forFeature(ENTIDADES_PLANTILLA),
   ],
   exports: [TypeOrmModule],
 })

@@ -7,55 +7,76 @@ alwaysApply: true
 
 Este proyecto es la **plantilla** de backend. Cualquier API derivada (AulaPlan, Formación360, etc.) mantiene estas convenciones.
 
+Reglas espejo para **GitHub Copilot / VS Code**: `.github/copilot-instructions.md` y `.github/instructions/*.instructions.md`.
+
 ## Estructura modular
 
-- Cada feature en `src/modules/<nombre-modulo>/` (ej. `auth`, `usuarios`, `database`).
-- Entidades TypeORM **solo** en `src/modules/database/entities/` con nombre `<nombre>.entity.ts` y barrel en `entities/index.ts`.
+- Cada feature en `src/modules/<nombre-modulo>/` (ej. `auth`, `users`, `empresas`, `roles`, `mail`, `payments`, `otp`, `seed`).
+- **Entidades:** `src/modules/database/entities/` con barrel `entities/index.ts`.
 - Código compartido en `src/common/` (decorators, dto, filters, helpers, types, utils).
+
+## Módulos incluidos en la plantilla
+
+| Módulo | Responsabilidad |
+|--------|-----------------|
+| `auth` | JWT UUID, registro OTP, login 2FA, `/auth/me`, permisos |
+| `otp` | Desafíos 2FA login, entrega correo OTP |
+| `users` | CRUD usuarios scoped a empresa |
+| `empresas` | Onboarding multiempresa y sucursales |
+| `roles` | Aplicaciones, módulos, roles y asignación |
+| `mail` | SMTP, plantillas transaccionales |
+| `payments` | PayPal por empresa, webhooks |
+| `seed` | RBAC + planes SaaS (TypeORM) |
+| `database` | TypeORM root config + entidades |
 
 ## Respuestas API
 
 Todos los endpoints devuelven `RespuestaServicio<T>` usando `ResponseHelper`:
 
 ```typescript
-// ✅ Correcto
 return ResponseHelper.ok(datos, 'Operación correcta');
 return ResponseHelper.fail('Error descriptivo', detalleOpcional);
 ```
 
-No devolver objetos crudos ni estructuras distintas a `{ exito, mensaje, data?, error? }`.
+Formato: `{ exito, mensaje, data?, error? }`. No devolver objetos crudos.
 
 ## Idioma y mensajes
 
-- Mensajes al cliente y textos de validación en **español** (ej. "Recurso no encontrado", "El campo es obligatorio").
-- Código (nombres de variables, tipos, comentarios técnicos) puede estar en inglés o español según el módulo existente.
+- Mensajes al cliente y textos de validación en **español**.
+- Código (nombres, tipos, comentarios técnicos) en inglés o español según el módulo.
 
 ## Tipado 100 % estricto
 
-- **Prohibido `any`**: usar tipos concretos, `unknown` con type guards o genéricos acotados.
-- **Arrays tipados**: siempre tipar (ej. `User[]`, `PaginationResult<Entidad>`).
-- **Objetos tipados**: DTOs, interfaces o tipos para retornos y parámetros. Retornos de funciones y parámetros siempre tipados.
-- En parámetros decorados (ej. `@CurrentUser() user: RequestUser`) usar `import type` si hace falta.
+- **Prohibido `any`**: tipos concretos, `unknown` + type guards, o genéricos acotados.
+- En `@CurrentUser() user: RequestUser` usar `import type`.
+- `RequestUser.id` es **UUID (`string`)** en este repo (ver `auth-plantilla.mdc`).
 
 ```typescript
-// ❌ Evitar
-const items: any[] = [];
-function find(id) { ... }
-return { items, total };
-
-// ✅ Correcto
-const items: MiEntidad[] = [];
-function find(id: string): Promise<MiEntidad> { ... }
-return createPaginationResult(items, page, limit, total);
+async findById(id: string): Promise<Usuario> { ... }
 ```
 
 ## Listados
 
-- Ningún listado sin paginación: no usar `findAll()` ni equivalente. Usar siempre el sistema de paginación (PageQueryDto + PaginationResult) en todos los listados.
+- Siempre paginados: `PageQueryDto` + `PaginationResult<T>`. Prohibido `findAll()` en endpoints.
 
 ## Reglas por ámbito
 
-- **Módulos Nest**: estructura controller/service/DTOs según `nest-modules.mdc`.
-- **Paginación**: formato estándar según `paginacion.mdc`.
-- **Entidades TypeORM**: convenciones en `typeorm-entities.mdc`.
-- **Auth**: JWT, roles y guards según `auth-plantilla.mdc`.
+- **Módulos Nest**: `nest-modules.mdc`
+- **Paginación**: `paginacion.mdc` (espejo Copilot: `.github/instructions/pagination.instructions.md`)
+- **Entidades TypeORM**: `typeorm-entities.mdc`
+- **Acceso a datos**: cero SQL directo — `typeorm-acceso-datos.mdc`
+- **Auth / OTP / 2FA**: `auth-plantilla.mdc`
+- **RBAC**: módulo + flag, el rol no autoriza — `rbac-modulos.mdc`
+- **Correo transaccional**: `email-templates-design-system.mdc`
+- **Idempotencia**: `idempotencia-antidoble-submit.mdc`
+
+## Guards globales
+
+`JwtAuthGuard`, `ThrottlerGuard`, `ContextoEmpresaGuard`, `PermisosGuard`, `SubscriptionActiveGuard` en `app.module.ts`.
+Interceptores: `IdempotencyInterceptor` (mutaciones), `LoggingInterceptor`.
+Decoradores: `@Public()`, `@AllowIncompleteSubscription()`, `@SkipEmpresaContext()`, `@RequirePermission()`.
+
+## main.ts
+
+- `ValidationPipe` global (whitelist, transform).
+- `NestFactory.create(AppModule, { rawBody: true })` para webhooks PayPal.

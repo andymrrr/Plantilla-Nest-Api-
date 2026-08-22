@@ -1,0 +1,65 @@
+---
+description: Design system obligatorio para correos transaccionales
+alwaysApply: true
+---
+
+# Sistema de templates email (plantilla)
+
+Aplicar estas reglas cuando se cree o modifique cualquier correo transaccional.
+
+## Regla 1: shell único
+
+- Usar siempre `buildTransactionalEmailShell(...)` desde `src/modules/mail/email-template.util.ts`.
+- Prohibido copiar/pegar HTML completo por servicio.
+
+## Regla 2: branding configurable
+
+- El nombre de marca en el header del correo sale de `APP_NAME` (env) vía `TransactionalMailService.getBrandName()`.
+- No hardcodear nombres de producto en plantillas de proyectos derivados.
+
+## Regla 3: seguridad HTML
+
+- Todo valor dinámico insertado en HTML debe pasar por `escapeHtml(...)`.
+- Nunca interpolar texto de usuario sin escape.
+
+## Regla 4: tono visual consistente
+
+- Definir `tone` explícito:
+  - `success`: pagos/activaciones confirmadas.
+  - `warning`: verificación OTP o acciones sensibles.
+  - `neutral`: informativos generales.
+
+## Regla 5: bloques reutilizables
+
+- Para contenido interno usar:
+  - `buildInfoCard(...)`
+  - `buildHighlightBox(...)`
+- Evitar repetir estilos inline de tarjetas/cajas en cada servicio.
+
+## Regla 6: versión texto obligatoria
+
+- Todo `sendMessage` debe incluir `text` además de `html`.
+- El texto plano debe contener la información crítica del correo.
+
+## Regla 7: capas del módulo mail
+
+- **`MailService`**: solo transporte SMTP (`sendMessage`, `sendPlainText`).
+- **`TransactionalMailService`**: envío con plantillas existentes.
+- **`templates/transactional-email.templates.ts`**: builders puros (subject, text, html).
+- Servicios de dominio (auth, pagos) **no** construyen HTML; llaman a `TransactionalMailService`.
+
+## Regla 8: plantillas existentes
+
+Reutilizar antes de crear nuevas:
+
+| Plantilla | Builder | Envío |
+|-----------|---------|-------|
+| Verificación registro | `buildRegisterVerificationEmail` | `sendRegisterVerificationEmail` |
+| OTP login 2FA | `buildLoginTwoFactorEmail` | `sendLoginTwoFactorCode` |
+| Pago suscripción OK | `buildSubscriptionPaymentSuccessEmail` | `sendSubscriptionPaymentSuccess` |
+| Bienvenida post-activación | `buildWelcomeAfterActivationEmail` | `sendWelcomeAfterActivation` |
+
+## Regla 9: calidad mínima
+
+- Mensajes en español profesional y claros.
+- Estructura mínima: preheader, eyebrow, title, subtitle, body, footerNote.

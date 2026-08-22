@@ -1,16 +1,17 @@
-Carpeta donde deben colocarse las entidades de la base de datos.
+# Entidades TypeORM
 
-Regla del template:
+Las entidades viven en **`src/modules/database/entities/`** con barrel `index.ts`.
 
-- Todas las entidades TypeORM deben vivir en `src/modules/database/entities`.
-- Nombres: `<nombre>.entity.ts`.
-- Exporta la clase entidad como `export class MiEntidad {}`.
+- Identidad y tenancy: `Usuario`, `Empresa`, `Sucursal`
+- RBAC: `Aplicacion`, `Modulo`, `Rol`, `RolModulo`, `UsuarioEmpresa`, `UsuarioSucursalRol`
+- Billing: `Plan`, `Suscripcion`, `EventoPaypal`
+- Auth OTP: `DesafioVerificacionRegistro`, `DesafioLoginDosFactores`
 
-Ejemplo:
+Todas las PKs son UUID (`string`). TypeORM las carga vía:
 
-- `src/modules/database/entities/user.entity.ts`
+- `DatabaseModule` → `ENTIDADES_PLANTILLA` en `forRoot` / `forFeature`
+- `data-source.ts` → `entities: ['src/modules/**/entities/*.ts']`
 
-Motivación:
+## Reglas
 
-- Centralizar entidades facilita migraciones y la configuración de TypeORM.
-- TypeORM carga automáticamente los archivos desde esta carpeta según `DatabaseModule`.
+Ver `.cursor/rules/typeorm-entities.mdc` y `.github/instructions/typeorm.instructions.md`.

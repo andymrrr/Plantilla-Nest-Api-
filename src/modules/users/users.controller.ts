@@ -1,20 +1,54 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { UsersService } from './users.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import { ResponseHelper } from '../../common/helpers/response.helper';
-import { UserListQueryDto } from './dto/user-list-query.dto';
+import type { RequestUser } from '../../common/types/request-user.types';
+import { CrearUsuarioEmpresaDto } from './dto/crear-usuario-empresa.dto';
+import { UsersService } from './users.service';
+import { UsuarioListQueryDto } from './dto/usuario-list-query.dto';
 
-@Controller('users')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@Controller('usuarios')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
-  @Roles('admin')
-  async list(@Query() query: UserListQueryDto) {
-    const result = await this.usersService.paginate(query);
+  @RequirePermission('usuarios', 'lectura')
+  async list(
+    @CurrentUser() user: RequestUser,
+    @Query() query: UsuarioListQueryDto,
+  ) {
+    const result = await this.usersService.paginate(user, query);
     return ResponseHelper.ok(result, 'Usuarios obtenidos correctamente');
+  }
+
+  @Post()
+  @RequirePermission('usuarios', 'escritura')
+  async crear(
+    @CurrentUser() user: RequestUser,
+    @Body() dto: CrearUsuarioEmpresaDto,
+  ) {
+    const data = await this.usersService.crearEnEmpresa(user, dto);
+    return ResponseHelper.ok(data, 'Usuario creado y asociado a la empresa');
+  }
+
+  @Get(':id/asignacion-rol')
+  @RequirePermission('roles', 'especial')
+  async asignacionRol(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    const data = await this.usersService.obtenerAsignacionRol(user, id);
+    return ResponseHelper.ok(
+      data,
+      data ? 'Asignación obtenida' : 'El usuario no tiene rol asignado',
+    );
   }
 }
