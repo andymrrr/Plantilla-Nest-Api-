@@ -6,11 +6,13 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { RequestUser } from '../../common/types/request-user.types';
+import { requireEmpresaId } from '../../common/utils/request-empresa';
 import { createPaginationResult } from '../../common/types/pagination.types';
 import type { PaginationResult } from '../../common/types/pagination.types';
 import { buildTypeOrmPaginationArgs } from '../../common/utils/pagination';
 import { withEmpresaId } from '../../common/utils/empresa-scope';
 import { Sucursal } from '../database/entities/sucursal.entity';
+import { PlanFeaturesService } from '../payments/plan-features.service';
 import { CrearSucursalDto } from './dto/crear-sucursal.dto';
 import { SucursalListQueryDto } from './dto/sucursal-list-query.dto';
 
@@ -19,13 +21,11 @@ export class SucursalesService {
   constructor(
     @InjectRepository(Sucursal)
     private readonly sucursalRepo: Repository<Sucursal>,
+    private readonly planFeatures: PlanFeaturesService,
   ) {}
 
   private empresaId(user: RequestUser): string {
-    if (!user.empresaId) {
-      throw new NotFoundException('No hay empresa activa en el contexto.');
-    }
-    return user.empresaId;
+    return requireEmpresaId(user);
   }
 
   async paginate(
@@ -56,6 +56,8 @@ export class SucursalesService {
         'Ya existe una sucursal con ese código en la empresa.',
       );
     }
+    const total = await this.sucursalRepo.count({ where: { empresaId } });
+    await this.planFeatures.assertCupoSucursales(empresaId, total);
     return this.sucursalRepo.save(
       this.sucursalRepo.create({
         empresaId,

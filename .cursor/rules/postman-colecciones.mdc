@@ -1,0 +1,35 @@
+---
+description: Colecciones Postman — generar desde controladores, no editar JSON a mano
+globs: docs/postman/**,src/modules/**/*.controller.ts
+alwaysApply: false
+---
+
+# Postman en la plantilla
+
+Doc: `docs/postman/README.md`. Espejo de Nexo, adaptado al catálogo mínimo.
+
+## Archivos
+
+| Pieza | Ruta |
+|-------|------|
+| Guía | `docs/postman/README.md` |
+| Generador | `docs/postman/generate-full-collection.mjs` |
+| Bodies | `docs/postman/example-bodies.mjs` |
+| Environment | `docs/postman/Plantilla-Demo.postman_environment.json` |
+| Colecciones | `Plantilla-API-Complete`, `Plantilla-API-Ready`, `Plantilla-Auth-Seed` |
+
+## Obligatorio
+
+- **No** editar los `*.postman_collection.json` a mano.
+- Tras un `@Controller` nuevo o un DTO de mutación: añadir body en `example-bodies.mjs` (`METHOD /ruta`) y correr `node docs/postman/generate-full-collection.mjs`.
+- Mutaciones autenticadas: el generador pone `x-idempotency-key`. Webhooks no.
+- Negocio: `x-empresa-id: {{empresaId}}` salvo `@Public` / `@SkipEmpresaContext`.
+- Login/register: script de test guarda `accessToken`, `verificationToken`, `twoFactorToken`.
+
+## Producto derivado
+
+Añade bodies de tus módulos en `example-bodies.mjs`. El walker ya recorre todos los `*.controller.ts`. No copies colecciones de Nexo (RNC, facturas, DGII) a esta plantilla.
+
+## Arranque
+
+`SEED_ENDPOINT_ENABLED=true` → seed fundación + planes → register/login → `POST /empresas` → Setup Ready.

@@ -24,6 +24,8 @@ Fuente: `src/modules/seed/rbac-catalogo.ts`.
 
 Roles sistema: `PROPIETARIO`, `SOPORTE`, `ADMINISTRADOR`, `SOLO_LECTURA`.
 
+Presets por módulo: `full` | `operar` | `lectura` | `ninguno`.
+
 Para un producto derivado (ERP, LMS, etc.):
 
 1. Añadir aplicaciones/módulos en `APLICACIONES_RBAC`.
@@ -51,8 +53,11 @@ Orden en `app.module.ts`:
 3. `ContextoEmpresaGuard`
 4. `PermisosGuard`
 5. `SubscriptionActiveGuard`
+6. `PlanFeatureGuard`
 
 `SubscriptionActiveGuard` no bloquea si no hay `empresaId`. Con empresa, exige `ACTIVA` o `EN_PRUEBA` y `fechaProximoPago` vigente.
+
+`PlanFeatureGuard` solo actúa si el handler declara `@RequirePlanFeature`. Las claves viven en `PLAN_FEATURE_KEYS` (vacío en la plantilla). El cupo de sucursales usa `maximoRecursos`.
 
 ## Endpoints clave
 

@@ -10,6 +10,7 @@ import type { PaginationResult } from '../../common/types/pagination.types';
 import { buildTypeOrmPaginationArgs } from '../../common/utils/pagination';
 import { Plan } from '../database/entities/plan.entity';
 import { Suscripcion } from '../database/entities/suscripcion.entity';
+import { normalizarCaracteristicas } from '../../common/types/plan-caracteristicas.types';
 import {
   ActualizarPlanDto,
   CrearPlanDto,
@@ -64,6 +65,7 @@ export class PlanesService {
         ordenVisualizacion: dto.ordenVisualizacion ?? 0,
         precioMensualCentavos: dto.precioMensualCentavos ?? 0,
         maximoRecursos: dto.maximoRecursos ?? 1,
+        caracteristicas: normalizarCaracteristicas(dto.caracteristicas, codigo),
         activo: dto.activo ?? true,
       }),
     );
@@ -96,6 +98,12 @@ export class PlanesService {
       precioMensualCentavos:
         dto.precioMensualCentavos ?? plan.precioMensualCentavos,
       maximoRecursos: dto.maximoRecursos ?? plan.maximoRecursos,
+      caracteristicas: normalizarCaracteristicas(
+        dto.caracteristicas === undefined
+          ? plan.caracteristicas
+          : { ...plan.caracteristicas, ...dto.caracteristicas },
+        dto.codigo?.trim().toLowerCase() ?? plan.codigo,
+      ),
       activo: dto.activo ?? plan.activo,
     });
     return this.obtener(id);

@@ -1,0 +1,399 @@
+{
+  "info": {
+    "_postman_id": "plantilla-auth-seed",
+    "name": "Plantilla — Auth y seed",
+    "description": "# Plantilla — Auth y seed\n\nSeed RBAC + planes, registro, verificación, login y onboarding de empresa.\n\nNo hay seed de 10 usuarios ERP: esa capa la añade el producto derivado.\n\n## Arranque\n1. Importa `Plantilla-Demo.postman_environment.json`.\n2. `SEED_ENDPOINT_ENABLED=true`.\n3. Seed → fundación + platform-plans.\n4. Register → verify-email (OTP del correo) → login.\n5. `POST /empresas` y `GET /auth/me`.\n\nGuía: `docs/postman/README.md`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "demoEmail",
+      "value": "propietario@plantilla.local"
+    },
+    {
+      "key": "demoPassword",
+      "value": "Demo1234!"
+    }
+  ],
+  "item": [
+    {
+      "name": "Seed",
+      "item": [
+        {
+          "name": "POST Seed fundación",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/seed/fundacion",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "seed",
+                "fundacion"
+              ]
+            },
+            "description": "Público (`@Public`)\nNo exige `x-empresa-id` (`@SkipEmpresaContext`)",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Seed platform-plans",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/seed/platform-plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "seed",
+                "platform-plans"
+              ]
+            },
+            "description": "Público (`@Public`)\nNo exige `x-empresa-id` (`@SkipEmpresaContext`)",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Registro y login",
+      "item": [
+        {
+          "name": "POST /auth/register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Público (`@Public`)\nNo exige `x-empresa-id` (`@SkipEmpresaContext`)\nVariables `{{…}}`: ejecuta Setup o captura IDs con GET.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{demoEmail}}\",\n  \"password\": \"{{demoPassword}}\",\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Plantilla\",\n  \"planCode\": \"starter\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const data = json && json.data;",
+                  "if (!data) { return; }",
+                  "if (data.accessToken || data.access_token) {",
+                  "  pm.environment.set('accessToken', data.accessToken || data.access_token);",
+                  "}",
+                  "if (data.verificationToken) {",
+                  "  pm.environment.set('verificationToken', data.verificationToken);",
+                  "}",
+                  "if (data.twoFactorToken) {",
+                  "  pm.environment.set('twoFactorToken', data.twoFactorToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/register/verify-email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register/verify-email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register",
+                "verify-email"
+              ]
+            },
+            "description": "Público (`@Public`)\nNo exige `x-empresa-id` (`@SkipEmpresaContext`)\nVariables `{{…}}`: ejecuta Setup o captura IDs con GET.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"verificationToken\": \"{{verificationToken}}\",\n  \"otpCode\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /auth/login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const data = json && json.data;",
+                  "if (!data) { return; }",
+                  "if (data.accessToken || data.access_token) {",
+                  "  pm.environment.set('accessToken', data.accessToken || data.access_token);",
+                  "}",
+                  "if (data.verificationToken) {",
+                  "  pm.environment.set('verificationToken', data.verificationToken);",
+                  "}",
+                  "if (data.twoFactorToken) {",
+                  "  pm.environment.set('twoFactorToken', data.twoFactorToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{demoEmail}}\",\n  \"password\": \"{{demoPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Guarda accessToken."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /auth/login/complete-2fa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login/complete-2fa",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login",
+                "complete-2fa"
+              ]
+            },
+            "description": "Público (`@Public`)\nNo exige `x-empresa-id` (`@SkipEmpresaContext`)\nVariables `{{…}}`: ejecuta Setup o captura IDs con GET.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"twoFactorToken\": \"{{twoFactorToken}}\",\n  \"otpCode\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Sesión y empresa",
+      "item": [
+        {
+          "name": "GET /auth/me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "No exige `x-empresa-id` (`@SkipEmpresaContext`)",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /empresas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-idempotency-key",
+                "value": "{{$guid}}",
+                "description": "Mutación idempotente"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/empresas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "empresas"
+              ]
+            },
+            "description": "No exige `x-empresa-id` (`@SkipEmpresaContext`)\nEnviar `x-idempotency-key`",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Empresa Postman\",\n  \"nombreComercial\": \"Postman Demo\",\n  \"direccion\": \"Av. Winston Churchill 100, Santo Domingo\",\n  \"telefono\": \"8095550199\",\n  \"correo\": \"postman@plantilla.local\",\n  \"sucursalNombre\": \"Principal\",\n  \"sucursalEsPrincipal\": true,\n  \"planCode\": \"starter\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /auth/me (con empresa)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-empresa-id",
+                "value": "{{empresaId}}",
+                "description": "Empresa activa (ContextoEmpresaGuard)"
+              },
+              {
+                "key": "x-sucursal-id",
+                "value": "{{sucursalId}}",
+                "description": "Opcional. Si el rol es por sucursal, envíala.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

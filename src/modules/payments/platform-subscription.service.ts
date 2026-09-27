@@ -15,6 +15,7 @@ import { Plan } from '../database/entities/plan.entity';
 import { Suscripcion } from '../database/entities/suscripcion.entity';
 import { Usuario } from '../database/entities/usuario.entity';
 import { PaypalBillingService } from './paypal-billing.service';
+import { normalizarCaracteristicas } from '../../common/types/plan-caracteristicas.types';
 import type {
   EstadoSuscripcionDto,
   FilaFacturaSuscripcion,
@@ -57,6 +58,10 @@ export class PlatformSubscriptionService {
       ordenVisualizacion: plan.ordenVisualizacion,
       precioMensualCentavos: plan.precioMensualCentavos,
       maximoRecursos: plan.maximoRecursos,
+      caracteristicas: normalizarCaracteristicas(
+        plan.caracteristicas,
+        plan.codigo,
+      ),
       ...(incluirRefsProveedor ? { paypalPlanId: plan.paypalPlanId } : {}),
     }));
   }

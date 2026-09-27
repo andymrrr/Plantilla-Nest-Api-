@@ -28,5 +28,6 @@ export interface ItemPlanSuscripcion {
   ordenVisualizacion: number;
   precioMensualCentavos: number;
   maximoRecursos: number;
+  caracteristicas: Record<string, boolean>;
   paypalPlanId?: string | null;
 }

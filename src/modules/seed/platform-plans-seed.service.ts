@@ -48,6 +48,7 @@ export class PlatformPlansSeedService {
       | 'ordenVisualizacion'
       | 'precioMensualCentavos'
       | 'maximoRecursos'
+      | 'caracteristicas'
       | 'activo'
       | 'precio'
       | 'moneda'
@@ -67,6 +68,7 @@ export class PlatformPlansSeedService {
           1900,
         ),
         maximoRecursos: 1,
+        caracteristicas: {},
         activo: true,
         precio: '19.00',
         moneda: 'USD',
@@ -86,6 +88,7 @@ export class PlatformPlansSeedService {
           4900,
         ),
         maximoRecursos: 3,
+        caracteristicas: {},
         activo: true,
         precio: '49.00',
         moneda: 'USD',
@@ -105,6 +108,7 @@ export class PlatformPlansSeedService {
           9900,
         ),
         maximoRecursos: 10,
+        caracteristicas: {},
         activo: true,
         precio: '99.00',
         moneda: 'USD',

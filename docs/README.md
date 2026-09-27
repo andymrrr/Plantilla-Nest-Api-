@@ -1,5 +1,9 @@
 # Documentación técnica — Plantilla Nest API
 
+## Postman
+
+- [Colecciones Postman (API completa, Ready, auth y seed)](./postman/README.md)
+
 ## Módulos
 
 - [Paginación (listados API)](./tecnico/05-paginacion.md)
@@ -16,6 +20,7 @@ Ver `.cursor/rules/` — **mantener sincronizado** con `.github/copilot-instruct
 
 - `proyecto-plantilla.mdc`, `auth-plantilla.mdc`, `rbac-modulos.mdc`, `typeorm-entities.mdc`, `typeorm-acceso-datos.mdc`
 - `email-templates-design-system.mdc`, `idempotencia-antidoble-submit.mdc`, `nest-modules.mdc`, `paginacion.mdc`
+- `postman-colecciones.mdc` — regenerar colecciones; no editar JSON a mano
 
 ## Instrucciones GitHub Copilot / VS Code (espejo)
 

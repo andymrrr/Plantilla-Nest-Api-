@@ -11,6 +11,7 @@ import { PaypalBillingService } from './paypal-billing.service';
 import { PaypalWebhookController } from './paypal-webhook.controller';
 import { PlanesController } from './planes.controller';
 import { PlanesService } from './planes.service';
+import { PlanFeaturesService } from './plan-features.service';
 import { PlatformSubscriptionService } from './platform-subscription.service';
 
 @Module({
@@ -25,7 +26,17 @@ import { PlatformSubscriptionService } from './platform-subscription.service';
     ]),
   ],
   controllers: [PaymentsController, PaypalWebhookController, PlanesController],
-  providers: [PaypalBillingService, PlatformSubscriptionService, PlanesService],
-  exports: [PaypalBillingService, PlatformSubscriptionService, PlanesService],
+  providers: [
+    PaypalBillingService,
+    PlatformSubscriptionService,
+    PlanesService,
+    PlanFeaturesService,
+  ],
+  exports: [
+    PaypalBillingService,
+    PlatformSubscriptionService,
+    PlanesService,
+    PlanFeaturesService,
+  ],
 })
 export class PaymentsModule {}

@@ -11,6 +11,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ContextoEmpresaGuard } from './modules/auth/guards/contexto-empresa.guard';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { PermisosGuard } from './modules/auth/guards/permisos.guard';
+import { PlanFeatureGuard } from './modules/auth/guards/plan-feature.guard';
 import { SubscriptionActiveGuard } from './modules/auth/guards/subscription-active.guard';
 import { AuthModule } from './modules/auth/auth.module';
 import { DatabaseModule } from './modules/database/database.module';
@@ -64,6 +65,10 @@ import { UsersModule } from './modules/users/users.module';
     {
       provide: APP_GUARD,
       useClass: SubscriptionActiveGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: PlanFeatureGuard,
     },
     {
       provide: APP_FILTER,

@@ -5,6 +5,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import type { PlanCaracteristicas } from '../../../common/types/plan-caracteristicas.types';
 
 @Entity({ name: 'planes' })
 export class Plan {
@@ -35,8 +36,16 @@ export class Plan {
   @Column({ name: 'precio_mensual_centavos', type: 'int', default: 0 })
   precioMensualCentavos!: number;
 
+  /** Tope de sucursales de la empresa. */
   @Column({ name: 'maximo_recursos', type: 'int', default: 1 })
   maximoRecursos!: number;
+
+  @Column({
+    name: 'caracteristicas',
+    type: 'jsonb',
+    default: () => `'{}'::jsonb`,
+  })
+  caracteristicas!: PlanCaracteristicas;
 
   @Column({ type: 'boolean', default: true })
   activo!: boolean;

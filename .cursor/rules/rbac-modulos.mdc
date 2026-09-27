@@ -31,7 +31,17 @@ Fuente: `src/modules/seed/rbac-catalogo.ts`. Los códigos de `@RequirePermission
 
 Roles sistema (`empresaId = NULL`, se clonan al crear empresa): `PROPIETARIO`, `SOPORTE`, `ADMINISTRADOR`, `SOLO_LECTURA`.
 
-Un proyecto derivado **añade módulos** al catálogo y vuelve a sembrar. No hardcodear códigos de rol en guards.
+Presets por módulo: `full` | `operar` | `lectura` | `ninguno`. Cadena: usuario → rol → módulo → flags. El backend **nunca** autoriza por código de rol.
+
+Un producto derivado **añade módulos** al catálogo, asigna preset en las plantillas de rol y vuelve a sembrar. No hardcodear códigos de rol en guards.
+
+## Capas extra (SaaS)
+
+- **Plan:** `@RequirePlanFeature` + `PlanFeatureGuard`. Claves en `PLAN_FEATURE_KEYS` (`src/common/types/plan-caracteristicas.types.ts`). Vacío = no bloquea.
+- **Suscripción:** `SubscriptionActiveGuard` (empresa operativa). Checkout/me: `@AllowIncompleteSubscription()`.
+- **Cupo:** `PlanFeaturesService.assertCupoSucursales` al crear sucursales (`maximoRecursos`).
+
+El plan y la suscripción **no sustituyen** el RBAC. Primero flag de módulo; después, si aplica, feature de plan.
 
 ## `esPropietario`
 
@@ -52,9 +62,11 @@ Los flags salen del rol asignado (`PROPIETARIO`: negocio de la empresa; `roles` 
 3. `ContextoEmpresaGuard` — enriquece `RequestUser.permisos`
 4. `PermisosGuard` — evalúa `@RequirePermission`
 5. `SubscriptionActiveGuard` — suscripción operativa de la **empresa**
+6. `PlanFeatureGuard` — `@RequirePlanFeature` según `planes.caracteristicas`
 
 ## Checklist
 
 - [ ] ¿El endpoint usa `@RequirePermission(modulo, flag)`?
 - [ ] ¿No hay comparaciones de código de rol ni de `esPropietario` para permitir una acción?
 - [ ] ¿El código de módulo existe en `CODIGOS_MODULO_RBAC` / `APLICACIONES_RBAC`?
+- [ ] ¿Si el módulo depende del plan, usa `@RequirePlanFeature`?

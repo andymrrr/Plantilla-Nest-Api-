@@ -30,7 +30,7 @@ Submódulos de soporte (ej. `otp/`, `mail/templates/`) siguen el mismo patrón s
 
 - Orquestación únicamente: DTO → servicio → `ResponseHelper`.
 - IDs: `ParseUUIDPipe` — `Usuario.id`, `Empresa.id`, `Rol.id` son UUID.
-- `@Public()`, `@SkipEmpresaContext()`, `@AllowIncompleteSubscription()`, `@RequirePermission()`, `@CurrentUser() user: RequestUser`.
+- `@Public()`, `@SkipEmpresaContext()`, `@AllowIncompleteSubscription()`, `@RequirePermission()`, `@RequirePlanFeature()`, `@CurrentUser() user: RequestUser`.
 
 ## Servicios
 

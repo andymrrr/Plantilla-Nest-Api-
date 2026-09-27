@@ -1,21 +1,23 @@
 ---
-description: Estructura y convenciones de la plantilla Nest API (base para todos los backends)
+description: Estructura y convenciones de LibreRD (plantilla Nest API)
 alwaysApply: true
 ---
 
-# Plantilla Nest API
+# LibreRD — Plantilla Nest API
 
-Este proyecto es la **plantilla** de backend. Cualquier API derivada (AulaPlan, Formación360, etc.) mantiene estas convenciones.
+Este repositorio es la **plantilla** de backend. Los productos derivados copian estas convenciones y añaden su dominio. No meter lógica de un producto concreto (colmado, LMS, etc.) aquí.
+
+Autorización: **usuario → rol → módulo → flag**. El rol no autoriza. El plan SaaS es otra capa (`@RequirePlanFeature`).
 
 Reglas espejo para **GitHub Copilot / VS Code**: `.github/copilot-instructions.md` y `.github/instructions/*.instructions.md`.
 
 ## Estructura modular
 
-- Cada feature en `src/modules/<nombre-modulo>/` (ej. `auth`, `users`, `empresas`, `roles`, `mail`, `payments`, `otp`, `seed`).
+- Cada feature en `src/modules/<nombre-modulo>/`.
 - **Entidades:** `src/modules/database/entities/` con barrel `entities/index.ts`.
 - Código compartido en `src/common/` (decorators, dto, filters, helpers, types, utils).
 
-## Módulos incluidos en la plantilla
+## Módulos de la plantilla
 
 | Módulo | Responsabilidad |
 |--------|-----------------|
@@ -25,7 +27,7 @@ Reglas espejo para **GitHub Copilot / VS Code**: `.github/copilot-instructions.m
 | `empresas` | Onboarding multiempresa y sucursales |
 | `roles` | Aplicaciones, módulos, roles y asignación |
 | `mail` | SMTP, plantillas transaccionales |
-| `payments` | PayPal por empresa, webhooks |
+| `payments` | PayPal por empresa, webhooks, features de plan |
 | `seed` | RBAC + planes SaaS (TypeORM) |
 | `database` | TypeORM root config + entidades |
 
@@ -59,6 +61,10 @@ async findById(id: string): Promise<Usuario> { ... }
 
 - Siempre paginados: `PageQueryDto` + `PaginationResult<T>`. Prohibido `findAll()` en endpoints.
 
+## Postman
+
+Colecciones en `docs/postman/`. No editar el JSON a mano: `example-bodies.mjs` + `node docs/postman/generate-full-collection.mjs`. Regla: `postman-colecciones.mdc`.
+
 ## Reglas por ámbito
 
 - **Módulos Nest**: `nest-modules.mdc`
@@ -69,12 +75,13 @@ async findById(id: string): Promise<Usuario> { ... }
 - **RBAC**: módulo + flag, el rol no autoriza — `rbac-modulos.mdc`
 - **Correo transaccional**: `email-templates-design-system.mdc`
 - **Idempotencia**: `idempotencia-antidoble-submit.mdc`
+- **Postman**: `docs/postman/` — no editar JSON a mano; `postman-colecciones.mdc`
 
 ## Guards globales
 
-`JwtAuthGuard`, `ThrottlerGuard`, `ContextoEmpresaGuard`, `PermisosGuard`, `SubscriptionActiveGuard` en `app.module.ts`.
+`JwtAuthGuard`, `ThrottlerGuard`, `ContextoEmpresaGuard`, `PermisosGuard`, `SubscriptionActiveGuard`, `PlanFeatureGuard` en `app.module.ts`.
 Interceptores: `IdempotencyInterceptor` (mutaciones), `LoggingInterceptor`.
-Decoradores: `@Public()`, `@AllowIncompleteSubscription()`, `@SkipEmpresaContext()`, `@RequirePermission()`.
+Decoradores: `@Public()`, `@AllowIncompleteSubscription()`, `@SkipEmpresaContext()`, `@RequirePermission()`, `@RequirePlanFeature()`.
 
 ## main.ts
 

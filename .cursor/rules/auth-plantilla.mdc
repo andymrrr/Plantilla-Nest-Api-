@@ -44,6 +44,7 @@ export interface RequestUser {
 | `ContextoEmpresaGuard` | Header `x-empresa-id` + fusión de flags |
 | `PermisosGuard` | `@RequirePermission(modulo, flag)` |
 | `SubscriptionActiveGuard` | Suscripción **de la empresa** operativa |
+| `PlanFeatureGuard` | `@RequirePlanFeature` según `planes.caracteristicas` |
 
 ## Decoradores de acceso
 
@@ -53,6 +54,7 @@ export interface RequestUser {
 | `@SkipEmpresaContext()` | Autenticado sin `x-empresa-id` (auth, listado/alta empresas, seed) |
 | `@AllowIncompleteSubscription()` | Permite acceso con suscripción `INCOMPLETA` (checkout, sync, `/auth/me`, 2FA) |
 | `@RequirePermission('usuarios', 'escritura')` | Flag del módulo (nunca código de rol) |
+| `@RequirePlanFeature('…')` | Feature de plan (claves en `PLAN_FEATURE_KEYS`; vacío en la plantilla) |
 
 ## Flujo registro (OTP email)
 

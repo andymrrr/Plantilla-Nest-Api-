@@ -20,7 +20,7 @@
 
 ```
 src/
-  app.module.ts          # Guards: Jwt, Throttler, ContextoEmpresa, Permisos, SubscriptionActive
+  app.module.ts          # Guards: Jwt, Throttler, ContextoEmpresa, Permisos, SubscriptionActive, PlanFeature
   main.ts                # rawBody: true (webhooks PayPal), ValidationPipe global
   common/                # decorators, dto, filters, helpers, types, utils
   modules/
@@ -63,7 +63,7 @@ src/
 - Servicio: `buildTypeOrmPaginationArgs<Entidad>(query, { searchableFields, defaultOrderBy })` + `repository.findAndCount(...)`.
 - Filtros de negocio: combinar en el servicio desde el DTO tipado (no en el helper de paginación).
 - DTO listado: extender `PageQueryDto`, `declare orderBy` con `@IsIn([...])`.
-- Regla completa: `.cursor/rules/paginacion.mdc` (igual que ZynklyBackend).
+- Regla completa: `.cursor/rules/paginacion.mdc`.
 
 ### Controller
 - Solo orquesta: recibe DTO, llama servicio, devuelve `ResponseHelper`.
@@ -71,6 +71,7 @@ src/
 - Sin contexto empresa: `@SkipEmpresaContext()`.
 - Rutas que permiten suscripción incompleta (checkout, sync): `@AllowIncompleteSubscription()`.
 - Permiso: `@RequirePermission('usuarios', 'escritura')`.
+- Feature de plan: `@RequirePlanFeature('…')` (claves en `PLAN_FEATURE_KEYS`; vacío en la plantilla).
 - Usuario autenticado: `@CurrentUser() user: RequestUser` (`src/common/types/request-user.types.ts`).
 
 ### Service
@@ -176,11 +177,12 @@ await queryRunner.query('INSERT ...');       // ❌ (solo migraciones)
 | `ContextoEmpresaGuard` | `x-empresa-id` + permisos fusionados |
 | `PermisosGuard` | `@RequirePermission(modulo, flag)` |
 | `SubscriptionActiveGuard` | Suscripción de la empresa operativa |
+| `PlanFeatureGuard` | `@RequirePlanFeature` según `planes.caracteristicas` |
 | `IdempotencyInterceptor` | Dedup mutaciones (`x-idempotency-key` o huella) |
 | `LoggingInterceptor` | Log HTTP |
 | `AllExceptionsFilter` | Formato de error unificado |
 
-Decoradores en `src/common/decorators/`: `Public`, `SkipEmpresaContext`, `RequirePermission`, `CurrentUser`, `AllowIncompleteSubscription`.
+Decoradores en `src/common/decorators/`: `Public`, `SkipEmpresaContext`, `RequirePermission`, `RequirePlanFeature`, `CurrentUser`, `AllowIncompleteSubscription`.
 
 ---
 
@@ -197,6 +199,7 @@ Decoradores en `src/common/decorators/`: `Public`, `SkipEmpresaContext`, `Requir
 | `nest-modules.mdc` | `src/modules/**/*.ts` |
 | `typeorm-entities.mdc` | Entidades (`database/entities/`) |
 | `paginacion.mdc` | Listados paginados (`PageQueryDto`, `PaginationResult`) |
+| `postman-colecciones.mdc` | Colecciones Postman (`docs/postman/`) |
 
 **Copilot path-scoped:** `.github/instructions/*.instructions.md` — deben coincidir con las reglas Cursor anteriores (incluye `pagination.instructions.md`).
 
@@ -213,3 +216,4 @@ Decoradores en `src/common/decorators/`: `Public`, `SkipEmpresaContext`, `Requir
 - [ ] ¿Mutación crítica con `x-idempotency-key` (el interceptor ya cubre single-flight)?
 - [ ] ¿Ruta pública, `@SkipEmpresaContext` o `@AllowIncompleteSubscription` si aplica?
 - [ ] ¿Mutación de negocio con `@RequirePermission(modulo, flag)`?
+- [ ] ¿Si el módulo depende del plan, `@RequirePlanFeature`?

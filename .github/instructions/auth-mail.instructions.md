@@ -33,7 +33,7 @@ applyTo: "src/modules/auth/**/*.ts,src/modules/otp/**/*.ts,src/modules/mail/**/*
 
 ## Guards globales
 
-`JwtAuthGuard`, `ThrottlerGuard`, `ContextoEmpresaGuard`, `PermisosGuard`, `SubscriptionActiveGuard`.
+`JwtAuthGuard`, `ThrottlerGuard`, `ContextoEmpresaGuard`, `PermisosGuard`, `SubscriptionActiveGuard`, `PlanFeatureGuard`.
 
 ## Correo
 

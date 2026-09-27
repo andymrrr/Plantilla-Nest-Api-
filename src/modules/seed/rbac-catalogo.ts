@@ -1,6 +1,7 @@
 import {
   EMPTY_MODULO_PERMISOS,
   FULL_MODULO_PERMISOS,
+  OPERAR_MODULO_PERMISOS,
   esModuloPlataforma,
   type ModuloCodigo,
   type ModuloPermisos,
@@ -50,7 +51,7 @@ const MODULOS_ADMINISTRACION = [
   'roles',
 ] as const;
 
-export type PresetPermiso = 'full' | 'lectura';
+export type PresetPermiso = 'full' | 'operar' | 'lectura' | 'ninguno';
 
 export interface RolSistemaCatalogo {
   codigo: string;
@@ -115,8 +116,14 @@ export function flagsDeRolParaModulo(
   if (preset === 'full') {
     return { ...FULL_MODULO_PERMISOS };
   }
+  if (preset === 'operar') {
+    return { ...OPERAR_MODULO_PERMISOS };
+  }
   if (preset === 'lectura') {
     return { ...EMPTY_MODULO_PERMISOS, lectura: true };
+  }
+  if (preset === 'ninguno') {
+    return { ...EMPTY_MODULO_PERMISOS };
   }
   if (esModuloPlataforma(codigoModulo)) {
     return { ...EMPTY_MODULO_PERMISOS };

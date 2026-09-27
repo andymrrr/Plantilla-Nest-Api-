@@ -1,0 +1,3034 @@
+{
+  "info": {
+    "_postman_id": "plantilla-api-ready",
+    "name": "Plantilla — API Ready",
+    "description": "# Plantilla — API Ready\n\nPlantilla Nest API: auth OTP/2FA, empresas, sucursales, usuarios, roles y billing PayPal.\nAutorización por **módulo + flag** (`lectura`, `escritura`, `modificar`, `eliminar`, `especial`, `reporte`).\n\n**Endpoints:** ~47\n**Base URL:** `{{baseUrl}}`\n\n## Arranque\n1. Importa `Plantilla-Demo.postman_environment.json` y actívalo.\n2. `SEED_ENDPOINT_ENABLED=true` y `NODE_ENV` ≠ `production`.\n3. `00 — Auth helpers` → seed + register + login (guarda `accessToken`).\n4. `POST /empresas` (onboarding) y luego Ready → `00 — Setup`.\n5. Rutas de negocio: `Bearer {{accessToken}}` + `x-empresa-id: {{empresaId}}`.\n\nGuía: `docs/postman/README.md`\n\nRegenerar: `node docs/postman/generate-full-collection.mjs`\n\nIncluye carpeta **00 — Setup** que captura IDs en el environment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "demoEmail",
+      "value": "propietario@plantilla.local"
+    },
+    {
+      "key": "demoPassword",
+      "value": "Demo1234!"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "empresaId",
+      "value": ""
+    },
+    {
+      "key": "sucursalId",
+      "value": ""
+    },
+    {
+      "key": "id",
+      "value": ""
+    },
+    {
+      "key": "rolId",
+      "value": ""
+    },
+    {
+      "key": "usuarioId",
+      "value": ""
+    },
+    {
+      "key": "moduloId",
+      "value": ""
+    },
+    {
+      "key": "planId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "00 — Setup",
+      "description": "Ejecuta en orden. Captura IDs en el environment. Primero seed + register/login + POST /empresas.",
+      "item": [
+        {
+          "name": "POST /seed/fundacion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/seed/fundacion",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "seed",
+                "fundacion"
+              ]
+            },
+            "description": "Público (`@Public`)\nNo exige `x-empresa-id` (`@SkipEmpresaContext`)",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /seed/platform-plans",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/seed/platform-plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "seed",
+                "platform-plans"
+              ]
+            },
+            "description": "Público (`@Public`)\nNo exige `x-empresa-id` (`@SkipEmpresaContext`)",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /auth/login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const data = json && json.data;",
+                  "if (!data) { return; }",
+                  "if (data.accessToken || data.access_token) {",
+                  "  pm.environment.set('accessToken', data.accessToken || data.access_token);",
+                  "}",
+                  "if (data.verificationToken) {",
+                  "  pm.environment.set('verificationToken', data.verificationToken);",
+                  "}",
+                  "if (data.twoFactorToken) {",
+                  "  pm.environment.set('twoFactorToken', data.twoFactorToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{demoEmail}}\",\n  \"password\": \"{{demoPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Guarda accessToken."
+          },
+          "response": []
+        },
+        {
+          "name": "GET /empresas → empresaId",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/empresas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "empresas"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "orderBy",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "order",
+                  "value": "asc",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "No exige `x-empresa-id` (`@SkipEmpresaContext`)",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const data = json && json.data;",
+                  "const items = data && (data.items || data);",
+                  "if (Array.isArray(items) && items[0] && items[0].id) {",
+                  "  pm.environment.set('empresaId', items[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /sucursales → sucursalId",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-empresa-id",
+                "value": "{{empresaId}}",
+                "description": "Empresa activa (ContextoEmpresaGuard)"
+              },
+              {
+                "key": "x-sucursal-id",
+                "value": "{{sucursalId}}",
+                "description": "Opcional. Si el rol es por sucursal, envíala.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sucursales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sucursales"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "orderBy",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "order",
+                  "value": "asc",
+                  "disabled": true
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const data = json && json.data;",
+                  "const items = data && (data.items || data);",
+                  "if (Array.isArray(items) && items[0] && items[0].id) {",
+                  "  pm.environment.set('sucursalId', items[0].id);",
+                  "  pm.environment.set(\"id\", items[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /roles → rolId",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-empresa-id",
+                "value": "{{empresaId}}",
+                "description": "Empresa activa (ContextoEmpresaGuard)"
+              },
+              {
+                "key": "x-sucursal-id",
+                "value": "{{sucursalId}}",
+                "description": "Opcional. Si el rol es por sucursal, envíala.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/roles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "roles"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "orderBy",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "order",
+                  "value": "asc",
+                  "disabled": true
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const data = json && json.data;",
+                  "const items = data && (data.items || data);",
+                  "if (Array.isArray(items) && items[0] && items[0].id) {",
+                  "  pm.environment.set('rolId', items[0].id);",
+                  "  pm.environment.set(\"id\", items[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /usuarios → usuarioId",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-empresa-id",
+                "value": "{{empresaId}}",
+                "description": "Empresa activa (ContextoEmpresaGuard)"
+              },
+              {
+                "key": "x-sucursal-id",
+                "value": "{{sucursalId}}",
+                "description": "Opcional. Si el rol es por sucursal, envíala.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/usuarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "usuarios"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "orderBy",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "order",
+                  "value": "asc",
+                  "disabled": true
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const data = json && json.data;",
+                  "const items = data && (data.items || data);",
+                  "if (Array.isArray(items) && items[0] && items[0].id) {",
+                  "  pm.environment.set('usuarioId', items[0].id);",
+                  "  pm.environment.set(\"id\", items[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /modulos → moduloId",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-empresa-id",
+                "value": "{{empresaId}}",
+                "description": "Empresa activa (ContextoEmpresaGuard)"
+              },
+              {
+                "key": "x-sucursal-id",
+                "value": "{{sucursalId}}",
+                "description": "Opcional. Si el rol es por sucursal, envíala.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/modulos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modulos"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "orderBy",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "order",
+                  "value": "asc",
+                  "disabled": true
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const data = json && json.data;",
+                  "const items = data && (data.items || data);",
+                  "if (Array.isArray(items) && items[0] && items[0].id) {",
+                  "  pm.environment.set('moduloId', items[0].id);",
+                  "  pm.environment.set(\"id\", items[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /planes → planId",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-empresa-id",
+                "value": "{{empresaId}}",
+                "description": "Empresa activa (ContextoEmpresaGuard)"
+              },
+              {
+                "key": "x-sucursal-id",
+                "value": "{{sucursalId}}",
+                "description": "Opcional. Si el rol es por sucursal, envíala.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/planes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "planes"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "orderBy",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "order",
+                  "value": "asc",
+                  "disabled": true
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const data = json && json.data;",
+                  "const items = data && (data.items || data);",
+                  "if (Array.isArray(items) && items[0] && items[0].id) {",
+                  "  pm.environment.set('planId', items[0].id);",
+                  "  pm.environment.set(\"id\", items[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "00 — Auth helpers",
+      "description": "Seed RBAC/planes + registro/login. Password: `{{demoPassword}}`. Tras login, crea empresa y corre Setup.",
+      "item": [
+        {
+          "name": "POST /seed/fundacion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/seed/fundacion",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "seed",
+                "fundacion"
+              ]
+            },
+            "description": "Público (`@Public`)\nNo exige `x-empresa-id` (`@SkipEmpresaContext`)",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /seed/platform-plans",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/seed/platform-plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "seed",
+                "platform-plans"
+              ]
+            },
+            "description": "Público (`@Public`)\nNo exige `x-empresa-id` (`@SkipEmpresaContext`)",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /auth/register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Público (`@Public`)\nNo exige `x-empresa-id` (`@SkipEmpresaContext`)\nVariables `{{…}}`: ejecuta Setup o captura IDs con GET.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{demoEmail}}\",\n  \"password\": \"{{demoPassword}}\",\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Plantilla\",\n  \"planCode\": \"starter\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const data = json && json.data;",
+                  "if (!data) { return; }",
+                  "if (data.accessToken || data.access_token) {",
+                  "  pm.environment.set('accessToken', data.accessToken || data.access_token);",
+                  "}",
+                  "if (data.verificationToken) {",
+                  "  pm.environment.set('verificationToken', data.verificationToken);",
+                  "}",
+                  "if (data.twoFactorToken) {",
+                  "  pm.environment.set('twoFactorToken', data.twoFactorToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const data = json && json.data;",
+                  "if (!data) { return; }",
+                  "if (data.accessToken || data.access_token) {",
+                  "  pm.environment.set('accessToken', data.accessToken || data.access_token);",
+                  "}",
+                  "if (data.verificationToken) {",
+                  "  pm.environment.set('verificationToken', data.verificationToken);",
+                  "}",
+                  "if (data.twoFactorToken) {",
+                  "  pm.environment.set('twoFactorToken', data.twoFactorToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{demoEmail}}\",\n  \"password\": \"{{demoPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Guarda accessToken (y twoFactorToken si el usuario tiene 2FA)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "auth",
+      "item": [
+        {
+          "name": "auth",
+          "item": [
+            {
+              "name": "GET /auth/me",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "me"
+                  ]
+                },
+                "description": "No exige `x-empresa-id` (`@SkipEmpresaContext`)",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POST /auth/register",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register"
+                  ]
+                },
+                "description": "Público (`@Public`)\nNo exige `x-empresa-id` (`@SkipEmpresaContext`)\nVariables `{{…}}`: ejecuta Setup o captura IDs con GET.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{demoEmail}}\",\n  \"password\": \"{{demoPassword}}\",\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Plantilla\",\n  \"planCode\": \"starter\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POST /auth/register/verify-email",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/register/verify-email",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register",
+                    "verify-email"
+                  ]
+                },
+                "description": "Público (`@Public`)\nNo exige `x-empresa-id` (`@SkipEmpresaContext`)\nVariables `{{…}}`: ejecuta Setup o captura IDs con GET.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"verificationToken\": \"{{verificationToken}}\",\n  \"otpCode\": \"123456\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POST /auth/register/resend-email-code",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/register/resend-email-code",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register",
+                    "resend-email-code"
+                  ]
+                },
+                "description": "Público (`@Public`)\nNo exige `x-empresa-id` (`@SkipEmpresaContext`)\nVariables `{{…}}`: ejecuta Setup o captura IDs con GET.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"verificationToken\": \"{{verificationToken}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POST /auth/login",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Público (`@Public`)\nNo exige `x-empresa-id` (`@SkipEmpresaContext`)\nVariables `{{…}}`: ejecuta Setup o captura IDs con GET.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{demoEmail}}\",\n  \"password\": \"{{demoPassword}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POST /auth/login/complete-2fa",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login/complete-2fa",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login",
+                    "complete-2fa"
+                  ]
+                },
+                "description": "Público (`@Public`)\nNo exige `x-empresa-id` (`@SkipEmpresaContext`)\nVariables `{{…}}`: ejecuta Setup o captura IDs con GET.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"twoFactorToken\": \"{{twoFactorToken}}\",\n  \"otpCode\": \"123456\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "PATCH /auth/me/two-factor",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "x-idempotency-key",
+                    "value": "{{$guid}}",
+                    "description": "Mutación idempotente"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/me/two-factor",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "me",
+                    "two-factor"
+                  ]
+                },
+                "description": "No exige `x-empresa-id` (`@SkipEmpresaContext`)\nEnviar `x-idempotency-key`\nVariables `{{…}}`: ejecuta Setup o captura IDs con GET.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"enabled\": false,\n  \"currentPassword\": \"{{demoPassword}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "seed",
+      "item": [
+        {
+          "name": "seed",
+          "item": [
+            {
+              "name": "POST /seed/fundacion",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/seed/fundacion",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "seed",
+                    "fundacion"
+                  ]
+                },
+                "description": "Público (`@Public`)\nNo exige `x-empresa-id` (`@SkipEmpresaContext`)",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POST /seed/platform-plans",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/seed/platform-plans",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "seed",
+                    "platform-plans"
+                  ]
+                },
+                "description": "Público (`@Public`)\nNo exige `x-empresa-id` (`@SkipEmpresaContext`)",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "empresas",
+      "item": [
+        {
+          "name": "empresas",
+          "item": [
+            {
+              "name": "GET /empresas",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/empresas",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "empresas"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "disabled": false
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "disabled": false
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "orderBy",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "order",
+                      "value": "asc",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "No exige `x-empresa-id` (`@SkipEmpresaContext`)",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POST /empresas",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "x-idempotency-key",
+                    "value": "{{$guid}}",
+                    "description": "Mutación idempotente"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/empresas",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "empresas"
+                  ]
+                },
+                "description": "No exige `x-empresa-id` (`@SkipEmpresaContext`)\nEnviar `x-idempotency-key`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nombre\": \"Empresa Postman\",\n  \"nombreComercial\": \"Postman Demo\",\n  \"direccion\": \"Av. Winston Churchill 100, Santo Domingo\",\n  \"telefono\": \"8095550199\",\n  \"correo\": \"postman@plantilla.local\",\n  \"sucursalNombre\": \"Principal\",\n  \"sucursalEsPrincipal\": true,\n  \"planCode\": \"starter\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "GET /empresas/:id",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/empresas/{{id}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "empresas",
+                    "{{id}}"
+                  ]
+                },
+                "description": "No exige `x-empresa-id` (`@SkipEmpresaContext`)",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "PATCH /empresas/:id",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  },
+                  {
+                    "key": "x-idempotency-key",
+                    "value": "{{$guid}}",
+                    "description": "Mutación idempotente"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/empresas/{{id}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "empresas",
+                    "{{id}}"
+                  ]
+                },
+                "description": "Permiso: `empresas.modificar`\nEnviar `x-idempotency-key`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"telefono\": \"8095550188\",\n  \"nombreComercial\": \"Postman Demo (editada)\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "sucursales",
+          "item": [
+            {
+              "name": "GET /sucursales",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sucursales",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sucursales"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "disabled": false
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "disabled": false
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "orderBy",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "order",
+                      "value": "asc",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Permiso: `sucursales.lectura`",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POST /sucursales",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  },
+                  {
+                    "key": "x-idempotency-key",
+                    "value": "{{$guid}}",
+                    "description": "Mutación idempotente"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sucursales",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sucursales"
+                  ]
+                },
+                "description": "Permiso: `sucursales.escritura`\nEnviar `x-idempotency-key`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"codigo\": \"SUC-PM\",\n  \"nombre\": \"Sucursal Postman\",\n  \"direccion\": \"Santiago\",\n  \"telefono\": \"8095550177\",\n  \"esPrincipal\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "GET /sucursales/:id",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sucursales/{{id}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sucursales",
+                    "{{id}}"
+                  ]
+                },
+                "description": "Permiso: `sucursales.lectura`",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "PATCH /sucursales/:id",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  },
+                  {
+                    "key": "x-idempotency-key",
+                    "value": "{{$guid}}",
+                    "description": "Mutación idempotente"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sucursales/{{id}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sucursales",
+                    "{{id}}"
+                  ]
+                },
+                "description": "Permiso: `sucursales.modificar`\nEnviar `x-idempotency-key`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nombre\": \"Sucursal Postman editada\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "users",
+      "item": [
+        {
+          "name": "usuarios",
+          "item": [
+            {
+              "name": "GET /usuarios",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/usuarios",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "usuarios"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "disabled": false
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "disabled": false
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "orderBy",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "order",
+                      "value": "asc",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Permiso: `usuarios.lectura`",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POST /usuarios",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  },
+                  {
+                    "key": "x-idempotency-key",
+                    "value": "{{$guid}}",
+                    "description": "Mutación idempotente"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/usuarios",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "usuarios"
+                  ]
+                },
+                "description": "Permiso: `usuarios.escritura`\nEnviar `x-idempotency-key`\nVariables `{{…}}`: ejecuta Setup o captura IDs con GET.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"correo\": \"staff.demo@plantilla.local\",\n  \"password\": \"{{demoPassword}}\",\n  \"nombre\": \"Staff\",\n  \"apellido\": \"Demo\",\n  \"rolId\": \"{{rolId}}\",\n  \"sucursalId\": \"{{sucursalId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "GET /usuarios/:id/asignacion-rol",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/usuarios/{{id}}/asignacion-rol",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "usuarios",
+                    "{{id}}",
+                    "asignacion-rol"
+                  ]
+                },
+                "description": "Permiso: `roles.especial`",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "roles",
+      "item": [
+        {
+          "name": "roles",
+          "item": [
+            {
+              "name": "GET /aplicaciones",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/aplicaciones",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "aplicaciones"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "disabled": false
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "disabled": false
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "orderBy",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "order",
+                      "value": "asc",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Permiso: `roles.lectura`",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "GET /modulos",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/modulos",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "modulos"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "disabled": false
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "disabled": false
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "orderBy",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "order",
+                      "value": "asc",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Permiso: `roles.lectura`",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "GET /roles",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/roles",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "roles"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "disabled": false
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "disabled": false
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "orderBy",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "order",
+                      "value": "asc",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Permiso: `roles.lectura`",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POST /roles",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  },
+                  {
+                    "key": "x-idempotency-key",
+                    "value": "{{$guid}}",
+                    "description": "Mutación idempotente"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/roles",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "roles"
+                  ]
+                },
+                "description": "Permiso: `roles.escritura`\nEnviar `x-idempotency-key`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"codigo\": \"CAJERO_DEMO\",\n  \"nombre\": \"Cajero demo\",\n  \"descripcion\": \"Rol de prueba Postman\",\n  \"modulos\": [\n    {\n      \"moduloId\": \"{{moduloId}}\",\n      \"lectura\": true,\n      \"escritura\": false,\n      \"modificar\": false,\n      \"eliminar\": false,\n      \"especial\": false,\n      \"reporte\": false\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "GET /roles/:id",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/roles/{{id}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "roles",
+                    "{{id}}"
+                  ]
+                },
+                "description": "Permiso: `roles.lectura`",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "PATCH /roles/:id",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  },
+                  {
+                    "key": "x-idempotency-key",
+                    "value": "{{$guid}}",
+                    "description": "Mutación idempotente"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/roles/{{id}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "roles",
+                    "{{id}}"
+                  ]
+                },
+                "description": "Permiso: `roles.modificar`\nEnviar `x-idempotency-key`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nombre\": \"Cajero demo editado\",\n  \"descripcion\": \"Actualizado desde Postman\",\n  \"modulos\": [\n    {\n      \"moduloId\": \"{{moduloId}}\",\n      \"lectura\": true,\n      \"escritura\": true,\n      \"modificar\": false,\n      \"eliminar\": false,\n      \"especial\": false,\n      \"reporte\": false\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POST /roles/asignaciones",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  },
+                  {
+                    "key": "x-idempotency-key",
+                    "value": "{{$guid}}",
+                    "description": "Mutación idempotente"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/roles/asignaciones",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "roles",
+                    "asignaciones"
+                  ]
+                },
+                "description": "Permiso: `roles.especial`\nEnviar `x-idempotency-key`\nVariables `{{…}}`: ejecuta Setup o captura IDs con GET.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"usuarioId\": \"{{usuarioId}}\",\n  \"rolId\": \"{{rolId}}\",\n  \"sucursalId\": \"{{sucursalId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "payments",
+      "item": [
+        {
+          "name": "payments",
+          "item": [
+            {
+              "name": "GET /payments/platform-subscription/plans",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/payments/platform-subscription/plans",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "payments",
+                    "platform-subscription",
+                    "plans"
+                  ]
+                },
+                "description": "Público (`@Public`)"
+              },
+              "response": []
+            },
+            {
+              "name": "GET /payments/platform-subscription",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/payments/platform-subscription",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "payments",
+                    "platform-subscription"
+                  ]
+                },
+                "description": "Permiso: `empresas.lectura`",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POST /payments/platform-subscription/sync-provider",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  },
+                  {
+                    "key": "x-idempotency-key",
+                    "value": "{{$guid}}",
+                    "description": "Mutación idempotente"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/payments/platform-subscription/sync-provider",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "payments",
+                    "platform-subscription",
+                    "sync-provider"
+                  ]
+                },
+                "description": "Permiso: `empresas.especial`\nEnviar `x-idempotency-key`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POST /payments/platform-subscription/checkout-session",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  },
+                  {
+                    "key": "x-idempotency-key",
+                    "value": "{{$guid}}",
+                    "description": "Mutación idempotente"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/payments/platform-subscription/checkout-session",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "payments",
+                    "platform-subscription",
+                    "checkout-session"
+                  ]
+                },
+                "description": "Permiso: `empresas.escritura`\nEnviar `x-idempotency-key`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"planCode\": \"starter\",\n  \"returnUrl\": \"http://localhost:3001/billing/ok\",\n  \"cancelUrl\": \"http://localhost:3001/billing/cancel\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POST /payments/platform-subscription/pause",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  },
+                  {
+                    "key": "x-idempotency-key",
+                    "value": "{{$guid}}",
+                    "description": "Mutación idempotente"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/payments/platform-subscription/pause",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "payments",
+                    "platform-subscription",
+                    "pause"
+                  ]
+                },
+                "description": "Permiso: `empresas.especial`\nEnviar `x-idempotency-key`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Pausa de prueba Postman\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POST /payments/platform-subscription/resume",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  },
+                  {
+                    "key": "x-idempotency-key",
+                    "value": "{{$guid}}",
+                    "description": "Mutación idempotente"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/payments/platform-subscription/resume",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "payments",
+                    "platform-subscription",
+                    "resume"
+                  ]
+                },
+                "description": "Permiso: `empresas.especial`\nEnviar `x-idempotency-key`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Reanudación de prueba Postman\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POST /payments/platform-subscription/cancel",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  },
+                  {
+                    "key": "x-idempotency-key",
+                    "value": "{{$guid}}",
+                    "description": "Mutación idempotente"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/payments/platform-subscription/cancel",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "payments",
+                    "platform-subscription",
+                    "cancel"
+                  ]
+                },
+                "description": "Permiso: `empresas.especial`\nEnviar `x-idempotency-key`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Cancelación de prueba Postman\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "GET /payments/platform-subscription/invoices",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/payments/platform-subscription/invoices",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "payments",
+                    "platform-subscription",
+                    "invoices"
+                  ]
+                },
+                "description": "Permiso: `empresas.reporte`",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "integrations/paypal/webhook | webhook/paypal",
+          "item": [
+            {
+              "name": "POST /integrations/paypal/webhook",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/integrations/paypal/webhook",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "integrations",
+                    "paypal",
+                    "webhook"
+                  ]
+                },
+                "description": "Público (`@Public`)",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"event_type\": \"BILLING.SUBSCRIPTION.ACTIVATED\",\n  \"resource\": {}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POST /webhook/paypal",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/webhook/paypal",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "webhook",
+                    "paypal"
+                  ]
+                },
+                "description": "Público (`@Public`)",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"event_type\": \"BILLING.SUBSCRIPTION.ACTIVATED\",\n  \"resource\": {}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "planes",
+          "item": [
+            {
+              "name": "GET /planes",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/planes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "planes"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "disabled": false
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "disabled": false
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "orderBy",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "order",
+                      "value": "asc",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Permiso: `planes.lectura`",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POST /planes",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  },
+                  {
+                    "key": "x-idempotency-key",
+                    "value": "{{$guid}}",
+                    "description": "Mutación idempotente"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/planes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "planes"
+                  ]
+                },
+                "description": "Permiso: `planes.escritura`\nEnviar `x-idempotency-key`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"codigo\": \"postman\",\n  \"nombre\": \"Plan Postman\",\n  \"descripcion\": \"Plan de prueba\",\n  \"precio\": \"0.00\",\n  \"moneda\": \"USD\",\n  \"activo\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "GET /planes/:id",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/planes/{{id}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "planes",
+                    "{{id}}"
+                  ]
+                },
+                "description": "Permiso: `planes.lectura`",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "PATCH /planes/:id",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  },
+                  {
+                    "key": "x-idempotency-key",
+                    "value": "{{$guid}}",
+                    "description": "Mutación idempotente"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/planes/{{id}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "planes",
+                    "{{id}}"
+                  ]
+                },
+                "description": "Permiso: `planes.modificar`\nEnviar `x-idempotency-key`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nombre\": \"Plan Postman editado\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "DELETE /planes/:id",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "x-empresa-id",
+                    "value": "{{empresaId}}",
+                    "description": "Empresa activa (ContextoEmpresaGuard)"
+                  },
+                  {
+                    "key": "x-sucursal-id",
+                    "value": "{{sucursalId}}",
+                    "description": "Opcional. Si el rol es por sucursal, envíala.",
+                    "disabled": true
+                  },
+                  {
+                    "key": "x-idempotency-key",
+                    "value": "{{$guid}}",
+                    "description": "Mutación idempotente"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/planes/{{id}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "planes",
+                    "{{id}}"
+                  ]
+                },
+                "description": "Permiso: `planes.eliminar`\nEnviar `x-idempotency-key`",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "app",
+      "item": [
+        {
+          "name": "app",
+          "item": [
+            {
+              "name": "GET /",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "disabled": false
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "disabled": false
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "orderBy",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "order",
+                      "value": "asc",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Público (`@Public`)"
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

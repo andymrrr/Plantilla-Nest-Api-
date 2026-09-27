@@ -48,6 +48,16 @@ export const FULL_MODULO_PERMISOS: ModuloPermisos = {
   reporte: true,
 };
 
+/** Operar el módulo: alta/edición, sin borrar, sin especial ni reporte. */
+export const OPERAR_MODULO_PERMISOS: ModuloPermisos = {
+  lectura: true,
+  escritura: true,
+  modificar: true,
+  eliminar: false,
+  especial: false,
+  reporte: false,
+};
+
 export type PermisosPorModulo = Partial<Record<ModuloCodigo, ModuloPermisos>>;
 
 /** Catálogo SaaS: no es de la empresa; solo la plantilla Soporte lleva estos flags. */

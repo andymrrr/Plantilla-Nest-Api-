@@ -14,6 +14,7 @@ import { RegisterEmailVerificationService } from './register-email-verification.
 import { PermisosService } from './permisos.service';
 import { ContextoEmpresaGuard } from './guards/contexto-empresa.guard';
 import { PermisosGuard } from './guards/permisos.guard';
+import { PlanFeatureGuard } from './guards/plan-feature.guard';
 import { SubscriptionActiveGuard } from './guards/subscription-active.guard';
 import { DesafioVerificacionRegistro } from '../database/entities/desafio-verificacion-registro.entity';
 import { Usuario } from '../database/entities/usuario.entity';
@@ -71,6 +72,7 @@ const parseJwtExpiresIn = (value?: string): JwtExpiresIn | undefined => {
     JwtStrategy,
     RegisterEmailVerificationService,
     SubscriptionActiveGuard,
+    PlanFeatureGuard,
     PermisosService,
     ContextoEmpresaGuard,
     PermisosGuard,
@@ -78,6 +80,7 @@ const parseJwtExpiresIn = (value?: string): JwtExpiresIn | undefined => {
   exports: [
     AuthService,
     SubscriptionActiveGuard,
+    PlanFeatureGuard,
     PermisosService,
     ContextoEmpresaGuard,
     PermisosGuard,

@@ -5,6 +5,7 @@ import {
   IsInt,
   IsNotEmpty,
   IsNumberString,
+  IsObject,
   IsOptional,
   IsString,
   MaxLength,
@@ -64,6 +65,11 @@ export class CrearPlanDto {
   @IsOptional()
   @IsBoolean()
   activo?: boolean;
+
+  /** Flags de plan. El producto derivado define las claves. */
+  @IsOptional()
+  @IsObject()
+  caracteristicas?: Record<string, boolean>;
 }
 
 export class ActualizarPlanDto extends PartialType(CrearPlanDto) {}

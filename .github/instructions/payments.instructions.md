@@ -21,6 +21,12 @@ applyTo: "src/modules/payments/**/*.ts,src/main.ts"
 - No eliminar un plan con suscripciones; desactivarlo.
 - Distinto del catálogo público `GET /payments/platform-subscription/plans`.
 
+## Features de plan
+- JSON `planes.caracteristicas`. Claves en `PLAN_FEATURE_KEYS` (`src/common/types/plan-caracteristicas.types.ts`).
+- Guard: `PlanFeatureGuard` + `@RequirePlanFeature`.
+- Cupo de sucursales: `PlanFeaturesService.assertCupoSucursales` (`maximoRecursos`).
+- En la plantilla el mapa de features está **vacío**; el producto derivado lo rellena.
+
 ## Guards
 - Endpoints checkout/sync/pause/resume/cancel: `@AllowIncompleteSubscription()` + `@RequirePermission('empresas', ...)`.
 - CRUD `/planes`: `@AllowIncompleteSubscription()` + `@RequirePermission('planes', ...)`.
